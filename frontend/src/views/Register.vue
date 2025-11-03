@@ -168,8 +168,14 @@ const handleRegister = async () => {
       password: registerForm.value.password
     })
     ElMessage.success('注册成功，请登录')
+    // 注册成功后自动跳转到登录页，用户需要手动登录
     router.push('/login')
   } catch (error) {
+    if (error.response?.data?.error) {
+      ElMessage.error(error.response.data.error)
+    } else {
+      ElMessage.error('注册失败，请重试')
+    }
     console.error(error)
   } finally {
     loading.value = false

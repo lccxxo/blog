@@ -105,6 +105,11 @@ const handleLogin = async () => {
     ElMessage.success('登录成功')
     router.push('/')
   } catch (error) {
+    if (error.response?.data?.error) {
+      ElMessage.error(error.response.data.error)
+    } else {
+      ElMessage.error('登录失败，请重试')
+    }
     console.error(error)
   } finally {
     loading.value = false

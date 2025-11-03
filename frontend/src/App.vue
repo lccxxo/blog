@@ -20,7 +20,10 @@
               :class="['nav-link', { active: activeMenu === item.path }]"
               @click="router.push(item.path)"
             >
-              {{ item.label }}
+              <span class="nav-icon" v-if="item.icon">
+                <component :is="item.icon" />
+              </span>
+              <span>{{ item.label }}</span>
             </a>
             <template v-if="userStore.isLoggedIn">
               <a 
@@ -29,7 +32,10 @@
                 :class="['nav-link', { active: activeMenu === item.path }]"
                 @click="router.push(item.path)"
               >
-                {{ item.label }}
+                <span class="nav-icon" v-if="item.icon">
+                  <component :is="item.icon" />
+                </span>
+                <span>{{ item.label }}</span>
               </a>
             </template>
           </div>
@@ -91,7 +97,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, h } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
@@ -104,15 +110,175 @@ const showUserMenu = ref(false)
 
 const activeMenu = computed(() => route.path)
 
+// 三丽鸥风格 Hello Kitty 图标
+// 首页 - 经典蝴蝶结 Kitty（左耳蝴蝶结）
+const HelloKittyHomeIcon = () => h('svg', {
+  width: 20,
+  height: 20,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  xmlns: 'http://www.w3.org/2000/svg',
+  class: 'hello-kitty-icon'
+}, [
+  // 右耳
+  h('circle', { cx: 16.5, cy: 5, r: 3.5, fill: '#FFFFFF', stroke: 'none' }),
+  h('circle', { cx: 16.5, cy: 5, r: 2.5, fill: '#FFB6C1', opacity: 0.3 }),
+  // 左耳 + 蝴蝶结
+  h('circle', { cx: 7.5, cy: 5, r: 3.5, fill: '#FFFFFF', stroke: 'none' }),
+  h('circle', { cx: 7.5, cy: 5, r: 2.5, fill: '#FFB6C1', opacity: 0.3 }),
+  // 蝴蝶结（在左耳上）
+  h('path', { d: 'M 6 4 Q 6.5 3 7.5 3.5 Q 8.5 4 8.5 5 Q 8.5 6 7.5 6.5 Q 6.5 7 6 6.5 Q 5.5 6 5.5 5 Q 5.5 4 6 4 Z', fill: '#FF1493' }),
+  h('circle', { cx: 7.5, cy: 5, r: 0.6, fill: '#FFFFFF' }),
+  h('path', { d: 'M 6.5 4.5 L 8.5 4.5', stroke: '#FFFFFF', 'stroke-width': 0.5 }),
+  // 头部
+  h('circle', { cx: 12, cy: 12, r: 7, fill: '#FFFFFF', stroke: 'none' }),
+  // 左眼（大而圆）
+  h('ellipse', { cx: 9.5, cy: 11, rx: 2.2, ry: 2.8, fill: '#000000' }),
+  h('circle', { cx: 10, cy: 10.5, r: 0.8, fill: '#FFFFFF' }),
+  // 右眼
+  h('ellipse', { cx: 14.5, cy: 11, rx: 2.2, ry: 2.8, fill: '#000000' }),
+  h('circle', { cx: 15, cy: 10.5, r: 0.8, fill: '#FFFFFF' }),
+  // 黄色小鼻子
+  h('ellipse', { cx: 12, cy: 13.5, rx: 0.8, ry: 0.6, fill: '#FFD700' }),
+  // 没有嘴巴（Hello Kitty 的特征）
+])
+
+// 分类 - 戴帽子 Kitty
+const HelloKittyCategoryIcon = () => h('svg', {
+  width: 20,
+  height: 20,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  xmlns: 'http://www.w3.org/2000/svg',
+  class: 'hello-kitty-icon'
+}, [
+  // 右耳
+  h('circle', { cx: 16.5, cy: 5, r: 3.5, fill: '#FFFFFF', stroke: 'none' }),
+  h('circle', { cx: 16.5, cy: 5, r: 2.5, fill: '#FFB6C1', opacity: 0.3 }),
+  // 左耳
+  h('circle', { cx: 7.5, cy: 5, r: 3.5, fill: '#FFFFFF', stroke: 'none' }),
+  h('circle', { cx: 7.5, cy: 5, r: 2.5, fill: '#FFB6C1', opacity: 0.3 }),
+  // 头部
+  h('circle', { cx: 12, cy: 12, r: 7, fill: '#FFFFFF', stroke: 'none' }),
+  // 帽子
+  h('ellipse', { cx: 12, cy: 5.5, rx: 4.5, ry: 2.5, fill: '#FFD700' }),
+  h('ellipse', { cx: 12, cy: 4.8, rx: 3.5, ry: 1.8, fill: '#FFE135' }),
+  h('circle', { cx: 12, cy: 4.5, r: 0.5, fill: '#FFFFFF' }),
+  // 左眼
+  h('ellipse', { cx: 9.5, cy: 11, rx: 2.2, ry: 2.8, fill: '#000000' }),
+  h('circle', { cx: 10, cy: 10.5, r: 0.8, fill: '#FFFFFF' }),
+  // 右眼
+  h('ellipse', { cx: 14.5, cy: 11, rx: 2.2, ry: 2.8, fill: '#000000' }),
+  h('circle', { cx: 15, cy: 10.5, r: 0.8, fill: '#FFFFFF' }),
+  // 黄色小鼻子
+  h('ellipse', { cx: 12, cy: 13.5, rx: 0.8, ry: 0.6, fill: '#FFD700' }),
+])
+
+// 标签 - 带星星 Kitty（右耳蝴蝶结）
+const HelloKittyTagIcon = () => h('svg', {
+  width: 20,
+  height: 20,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  xmlns: 'http://www.w3.org/2000/svg',
+  class: 'hello-kitty-icon'
+}, [
+  // 右耳 + 蝴蝶结
+  h('circle', { cx: 16.5, cy: 5, r: 3.5, fill: '#FFFFFF', stroke: 'none' }),
+  h('circle', { cx: 16.5, cy: 5, r: 2.5, fill: '#FFB6C1', opacity: 0.3 }),
+  h('path', { d: 'M 15.5 4 Q 16 3 17 3.5 Q 18 4 18 5 Q 18 6 17 6.5 Q 16 7 15.5 6.5 Q 15 6 15 5 Q 15 4 15.5 4 Z', fill: '#FF69B4' }),
+  h('circle', { cx: 17, cy: 5, r: 0.6, fill: '#FFFFFF' }),
+  h('path', { d: 'M 16 4.5 L 18 4.5', stroke: '#FFFFFF', 'stroke-width': 0.5 }),
+  // 左耳
+  h('circle', { cx: 7.5, cy: 5, r: 3.5, fill: '#FFFFFF', stroke: 'none' }),
+  h('circle', { cx: 7.5, cy: 5, r: 2.5, fill: '#FFB6C1', opacity: 0.3 }),
+  // 星星装饰
+  h('path', { d: 'M 12 2 L 12.8 4.2 L 15 4 L 13.2 5.8 L 15.5 7.5 L 12.5 7 L 12 9 L 11.5 7 L 8.5 7.5 L 10.8 5.8 L 9 4 L 11.2 4.2 Z', fill: '#FFD700' }),
+  // 头部
+  h('circle', { cx: 12, cy: 12, r: 7, fill: '#FFFFFF', stroke: 'none' }),
+  // 左眼
+  h('ellipse', { cx: 9.5, cy: 11, rx: 2.2, ry: 2.8, fill: '#000000' }),
+  h('circle', { cx: 10, cy: 10.5, r: 0.8, fill: '#FFFFFF' }),
+  // 右眼
+  h('ellipse', { cx: 14.5, cy: 11, rx: 2.2, ry: 2.8, fill: '#000000' }),
+  h('circle', { cx: 15, cy: 10.5, r: 0.8, fill: '#FFFFFF' }),
+  // 黄色小鼻子
+  h('ellipse', { cx: 12, cy: 13.5, rx: 0.8, ry: 0.6, fill: '#FFD700' }),
+])
+
+// 我的文章 - 拿笔 Kitty
+const HelloKittyArticleIcon = () => h('svg', {
+  width: 20,
+  height: 20,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  xmlns: 'http://www.w3.org/2000/svg',
+  class: 'hello-kitty-icon'
+}, [
+  // 右耳
+  h('circle', { cx: 16.5, cy: 5, r: 3.5, fill: '#FFFFFF', stroke: 'none' }),
+  h('circle', { cx: 16.5, cy: 5, r: 2.5, fill: '#FFB6C1', opacity: 0.3 }),
+  // 左耳
+  h('circle', { cx: 7.5, cy: 5, r: 3.5, fill: '#FFFFFF', stroke: 'none' }),
+  h('circle', { cx: 7.5, cy: 5, r: 2.5, fill: '#FFB6C1', opacity: 0.3 }),
+  // 头部
+  h('circle', { cx: 12, cy: 12, r: 7, fill: '#FFFFFF', stroke: 'none' }),
+  // 笔（在右侧）
+  h('line', { x1: 17.5, y1: 10, x2: 19, y2: 8.5, stroke: '#8B4513', 'stroke-width': 2.5, 'stroke-linecap': 'round' }),
+  h('line', { x1: 17.5, y1: 10.5, x2: 19.5, y2: 8.5, stroke: '#FF6B9D', 'stroke-width': 1.8, 'stroke-linecap': 'round' }),
+  h('circle', { cx: 19.2, cy: 8.2, r: 0.5, fill: '#FFB6C1' }),
+  // 左眼
+  h('ellipse', { cx: 9.5, cy: 11, rx: 2.2, ry: 2.8, fill: '#000000' }),
+  h('circle', { cx: 10, cy: 10.5, r: 0.8, fill: '#FFFFFF' }),
+  // 右眼
+  h('ellipse', { cx: 14.5, cy: 11, rx: 2.2, ry: 2.8, fill: '#000000' }),
+  h('circle', { cx: 15, cy: 10.5, r: 0.8, fill: '#FFFFFF' }),
+  // 黄色小鼻子
+  h('ellipse', { cx: 12, cy: 13.5, rx: 0.8, ry: 0.6, fill: '#FFD700' }),
+])
+
+// 我的评论 - 带对话气泡 Kitty
+const HelloKittyCommentIcon = () => h('svg', {
+  width: 20,
+  height: 20,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  xmlns: 'http://www.w3.org/2000/svg',
+  class: 'hello-kitty-icon'
+}, [
+  // 右耳
+  h('circle', { cx: 16.5, cy: 5, r: 3.5, fill: '#FFFFFF', stroke: 'none' }),
+  h('circle', { cx: 16.5, cy: 5, r: 2.5, fill: '#FFB6C1', opacity: 0.3 }),
+  // 左耳
+  h('circle', { cx: 7.5, cy: 5, r: 3.5, fill: '#FFFFFF', stroke: 'none' }),
+  h('circle', { cx: 7.5, cy: 5, r: 2.5, fill: '#FFB6C1', opacity: 0.3 }),
+  // 头部
+  h('circle', { cx: 12, cy: 12, r: 7, fill: '#FFFFFF', stroke: 'none' }),
+  // 对话气泡（右侧）
+  h('ellipse', { cx: 17.5, cy: 16, rx: 4, ry: 3.5, fill: '#FFE4E1', stroke: '#FFB6C1', 'stroke-width': 1.2 }),
+  h('path', { d: 'M 15 16.5 L 13 18.5 L 14 17 Z', fill: '#FFE4E1' }),
+  h('circle', { cx: 16.5, cy: 15.2, r: 0.5, fill: '#FFB6C1' }),
+  h('circle', { cx: 18, cy: 16, r: 0.5, fill: '#FFB6C1' }),
+  h('circle', { cx: 16.5, cy: 16.8, r: 0.5, fill: '#FFB6C1' }),
+  // 左眼
+  h('ellipse', { cx: 9.5, cy: 11, rx: 2.2, ry: 2.8, fill: '#000000' }),
+  h('circle', { cx: 10, cy: 10.5, r: 0.8, fill: '#FFFFFF' }),
+  // 右眼
+  h('ellipse', { cx: 14.5, cy: 11, rx: 2.2, ry: 2.8, fill: '#000000' }),
+  h('circle', { cx: 15, cy: 10.5, r: 0.8, fill: '#FFFFFF' }),
+  // 黄色小鼻子
+  h('ellipse', { cx: 12, cy: 13.5, rx: 0.8, ry: 0.6, fill: '#FFD700' }),
+])
+
 const menuItems = [
-  { path: '/', label: '首页' },
-  { path: '/categories', label: '分类' },
-  { path: '/tags', label: '标签' }
+  { path: '/', label: '首页', icon: HelloKittyHomeIcon },
+  { path: '/categories', label: '分类', icon: HelloKittyCategoryIcon },
+  { path: '/tags', label: '标签', icon: HelloKittyTagIcon }
 ]
 
 const authMenuItems = [
-  { path: '/my-articles', label: '我的文章' },
-  { path: '/my-comments', label: '我的评论' }
+  { path: '/my-articles', label: '我的文章', icon: HelloKittyArticleIcon },
+  { path: '/my-comments', label: '我的评论', icon: HelloKittyCommentIcon }
 ]
 
 const handleScroll = () => {
@@ -219,21 +385,40 @@ onUnmounted(() => {
   padding: 0 20px;
   font-size: 15px;
   font-weight: 400;
-  color: #1d1d1f;
+  color: #ffb6c1;
   text-decoration: none;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.3s;
   line-height: 72px;
   position: relative;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s;
+}
+
+.nav-link:hover .nav-icon {
+  transform: scale(1.15) rotate(5deg);
+}
+
+.nav-link.active .nav-icon {
+  transform: scale(1.1);
 }
 
 .nav-link:hover {
-  opacity: 0.65;
+  color: #ff8fab;
+  opacity: 1;
 }
 
 .nav-link.active {
-  color: #1d1d1f;
+  color: #ff6b9d;
   font-weight: 500;
 }
 
@@ -243,9 +428,10 @@ onUnmounted(() => {
   bottom: 16px;
   left: 20px;
   right: 20px;
-  height: 3px;
-  background: #1d1d1f;
+  height: 2.5px;
+  background: linear-gradient(90deg, #ff6b9d 0%, #ff8fab 100%);
   border-radius: 2px;
+  box-shadow: 0 2px 8px rgba(255, 107, 157, 0.3);
 }
 
 .nav-actions {
@@ -421,7 +607,26 @@ onUnmounted(() => {
   .nav-link {
     padding: 0 16px;
     font-size: 14px;
+    gap: 6px;
   }
+  
+  .nav-icon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.hello-kitty-icon {
+  transition: all 0.3s;
+  filter: drop-shadow(0 2px 4px rgba(255, 182, 193, 0.3));
+}
+
+.nav-link:hover .hello-kitty-icon {
+  filter: drop-shadow(0 3px 6px rgba(255, 182, 193, 0.5));
+}
+
+.nav-link.active .hello-kitty-icon {
+  filter: drop-shadow(0 3px 8px rgba(255, 107, 157, 0.6));
 }
 
 @media (max-width: 768px) {

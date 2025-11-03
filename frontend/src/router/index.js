@@ -73,9 +73,15 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   
+  // 如果访问需要认证的页面但未登录，重定向到登录页
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
     next('/login')
-  } else {
+  } 
+  // 如果已登录用户访问登录/注册页，重定向到首页
+  else if ((to.path === '/login' || to.path === '/register') && userStore.isLoggedIn) {
+    next('/')
+  } 
+  else {
     next()
   }
 })
