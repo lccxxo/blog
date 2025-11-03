@@ -79,6 +79,7 @@ func SetupRouter() *gin.Engine {
 
 		// 上传管理
 		protected.POST("/upload/image", controllers.UploadImage)
+		protected.POST("/upload/video", controllers.UploadVideo)
 		protected.DELETE("/upload/image", controllers.DeleteImage)
 	}
 

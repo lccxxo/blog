@@ -22,6 +22,27 @@ export const uploadAPI = {
     })
   },
 
+  // 上传视频
+  uploadVideo(file, onProgress) {
+    const formData = new FormData()
+    formData.append('video', file)
+    
+    return request({
+      url: '/upload/video',
+      method: 'post',
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          onProgress(percentCompleted)
+        }
+      }
+    })
+  },
+
   // 删除图片
   deleteImage(url) {
     return request({

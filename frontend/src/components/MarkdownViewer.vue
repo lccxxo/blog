@@ -219,6 +219,20 @@ const renderedContent = computed(() => {
   text-decoration: line-through;
   opacity: 0.6;
 }
+
+.markdown-viewer :deep(video) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin: 32px 0;
+  box-shadow: 0 4px 20px rgba(255, 182, 193, 0.2);
+  border: 1px solid rgba(255, 182, 193, 0.2);
+  background: #000;
+}
+
+.markdown-viewer :deep(video)::-webkit-media-controls-panel {
+  background: rgba(255, 182, 193, 0.1);
+}
 </style>
 
 

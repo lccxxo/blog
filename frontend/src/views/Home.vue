@@ -230,7 +230,7 @@ const filters = ref({
   tag_id: ''
 })
 
-const viewMode = ref('grid') // 'grid' 或 'list'
+const viewMode = ref('list') // 'grid' 或 'list'，默认横向列表
 
 const loadArticles = async () => {
   try {

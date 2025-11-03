@@ -6,11 +6,19 @@ import (
 	"github.com/lccxxo/blog/config"
 	"github.com/lccxxo/blog/database"
 	"github.com/lccxxo/blog/routes"
+	"github.com/lccxxo/blog/utils"
 )
 
 func main() {
 	// 初始化数据库
 	database.InitDB()
+
+	// 初始化OSS（如果配置了OSS）
+	if err := utils.InitOSS(); err != nil {
+		log.Printf("警告: OSS初始化失败: %v (将使用本地存储)\n", err)
+	} else {
+		log.Println("OSS初始化成功")
+	}
 
 	// 设置路由
 	r := routes.SetupRouter()

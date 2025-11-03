@@ -45,6 +45,18 @@
             上传图片
           </el-button>
         </el-upload>
+        <el-upload
+          ref="videoUploadRef"
+          :auto-upload="false"
+          :show-file-list="false"
+          :on-change="handleVideoSelect"
+          accept="video/*"
+        >
+          <el-button size="small" type="primary" :loading="videoUploading">
+            <el-icon><VideoPlay /></el-icon>
+            上传视频
+          </el-button>
+        </el-upload>
         <el-button size="small" @click="insertMarkdown('`', '`')">代码</el-button>
         <el-button size="small" @click="insertMarkdown('```\n', '\n```')">代码块</el-button>
         <el-divider direction="vertical" />
@@ -62,6 +74,7 @@ import { marked } from 'marked'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import { ElMessage } from 'element-plus'
+import { VideoPlay } from '@element-plus/icons-vue'
 import { uploadAPI } from '@/api/upload'
 
 const props = defineProps({
@@ -76,7 +89,9 @@ const emit = defineEmits(['update:modelValue'])
 const activeTab = ref('edit')
 const content = ref(props.modelValue)
 const uploading = ref(false)
+const videoUploading = ref(false)
 const uploadRef = ref()
+const videoUploadRef = ref()
 
 // 配置 marked
 marked.setOptions({
@@ -88,6 +103,12 @@ marked.setOptions({
   },
   breaks: true,
   gfm: true
+})
+
+// 配置marked以允许HTML（用于视频标签）
+marked.use({
+  mangle: false,
+  headerIds: false
 })
 
 const renderedContent = computed(() => {
@@ -171,6 +192,59 @@ const handleImageSelect = async (file) => {
     ElMessage.error(error.response?.data?.error || '图片上传失败')
   } finally {
     uploading.value = false
+  }
+}
+
+// 处理视频选择
+const handleVideoSelect = async (file) => {
+  if (!file || !file.raw) return
+
+  // 验证文件类型
+  const allowedTypes = ['video/mp4', 'video/avi', 'video/quicktime', 'video/x-ms-wmv', 'video/x-flv', 'video/x-matroska', 'video/webm']
+  if (!allowedTypes.includes(file.raw.type)) {
+    ElMessage.error('不支持的视频格式，请上传 MP4、AVI、MOV、WMV、FLV、MKV 或 WEBM 格式')
+    return
+  }
+
+  // 验证文件大小（100MB）
+  if (file.raw.size > 100 * 1024 * 1024) {
+    ElMessage.error('视频大小不能超过 100MB')
+    return
+  }
+
+  try {
+    videoUploading.value = true
+    const res = await uploadAPI.uploadVideo(file.raw, (percent) => {
+      console.log(`视频上传进度: ${percent}%`)
+    })
+
+    // 插入视频HTML标签（Markdown本身不支持视频，使用HTML）
+    const videoUrl = res.url
+    const videoName = file.name
+    const videoType = file.raw.type || 'video/mp4'
+    const videoHtml = `<video controls width="100%">\n  <source src="${videoUrl}" type="${videoType}">\n  您的浏览器不支持视频标签。\n</video>\n\n`
+    
+    const textarea = document.querySelector('.markdown-editor textarea')
+    if (textarea) {
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      content.value = content.value.substring(0, start) + videoHtml + content.value.substring(end)
+      emit('update:modelValue', content.value)
+      
+      // 设置光标位置
+      setTimeout(() => {
+        textarea.focus()
+        const newCursorPos = start + videoHtml.length
+        textarea.setSelectionRange(newCursorPos, newCursorPos)
+      }, 0)
+    }
+
+    ElMessage.success('视频上传成功')
+  } catch (error) {
+    console.error('视频上传失败:', error)
+    ElMessage.error(error.response?.data?.error || '视频上传失败')
+  } finally {
+    videoUploading.value = false
   }
 }
 </script>
