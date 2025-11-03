@@ -13,20 +13,20 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
-	// 配置 CORS
+	// 配置 CORS - 允许所有源
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "http://127.0.0.1:3000"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length", "Authorization"},
+		AllowCredentials: false, // 注意：AllowAllOrigins为true时，AllowCredentials必须为false
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// 公开路由
+	// API路由组
 	api := r.Group("/api")
 	{
-		// 认证相关
+		// 公开的认证路由（不需要认证）
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", controllers.Register)
@@ -48,8 +48,8 @@ func SetupRouter() *gin.Engine {
 		api.GET("/comments/:id", controllers.GetComment)
 	}
 
-	// 需要认证的路由
-	protected := r.Group("/api")
+	// 需要认证的路由（使用不同的组避免冲突）
+	protected := api.Group("")
 	protected.Use(middlewares.AuthMiddleware())
 	{
 		// 用户相关

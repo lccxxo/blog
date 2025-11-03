@@ -11,7 +11,9 @@ const request = axios.create({
 request.interceptors.request.use(
   config => {
     const userStore = useUserStore()
-    if (userStore.token) {
+    // 登录和注册请求不需要token
+    const isAuthRequest = config.url && (config.url.includes('/auth/login') || config.url.includes('/auth/register'))
+    if (userStore.token && !isAuthRequest) {
       config.headers.Authorization = `Bearer ${userStore.token}`
     }
     return config
