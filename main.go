@@ -23,6 +23,9 @@ func main() {
 	// 设置路由
 	r := routes.SetupRouter()
 
+	// 增加请求体大小限制，允许上传大文件（5000MB）
+	r.MaxMultipartMemory = 5000 << 20 // 500MB
+
 	// 启动服务器
 	log.Printf("服务器启动在端口 %s\n", config.AppConfig.Server.Port)
 	if err := r.Run(config.AppConfig.Server.Port); err != nil {

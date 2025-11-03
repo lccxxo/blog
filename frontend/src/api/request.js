@@ -4,7 +4,7 @@ import { useUserStore } from '@/stores/user'
 
 const request = axios.create({
   baseURL: '/api',
-  timeout: 10000
+  timeout: 300000 // 默认5分钟，适用于上传大文件
 })
 
 // 请求拦截器

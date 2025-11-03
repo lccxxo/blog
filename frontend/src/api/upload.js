@@ -10,6 +10,7 @@ export const uploadAPI = {
       url: '/upload/image',
       method: 'post',
       data: formData,
+      timeout: 600000, // 图片上传超时时间：10分钟
       headers: {
         'Content-Type': 'multipart/form-data'
       },
@@ -31,6 +32,7 @@ export const uploadAPI = {
       url: '/upload/video',
       method: 'post',
       data: formData,
+      timeout: 1800000, // 视频上传超时时间：30分钟（视频文件通常较大）
       headers: {
         'Content-Type': 'multipart/form-data'
       },

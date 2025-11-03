@@ -34,11 +34,7 @@ func UploadImage(c *gin.Context) {
 		return
 	}
 
-	// 验证文件大小（限制为5MB）
-	if file.Size > 5*1024*1024 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "图片大小不能超过5MB"})
-		return
-	}
+	// 文件大小限制已移除
 
 	// 打开文件
 	src, err := file.Open()
@@ -88,11 +84,7 @@ func UploadVideo(c *gin.Context) {
 		return
 	}
 
-	// 验证文件大小（限制为100MB）
-	if file.Size > 100*1024*1024 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "视频大小不能超过100MB"})
-		return
-	}
+	// 文件大小限制已移除
 
 	// 打开文件
 	src, err := file.Open()

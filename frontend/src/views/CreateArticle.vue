@@ -218,11 +218,7 @@ const handleCoverImageSelect = async (file) => {
     return
   }
 
-  // 验证文件大小（5MB）
-  if (file.raw.size > 5 * 1024 * 1024) {
-    ElMessage.error('图片大小不能超过 5MB')
-    return
-  }
+  // 文件大小限制已移除
 
   try {
     coverUploading.value = true

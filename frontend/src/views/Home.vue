@@ -453,8 +453,17 @@ const getPlainTextSummary = (content) => {
   // 移除Markdown链接语法 [text](url)
   text = text.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
   
-  // 移除Markdown图片语法 ![alt](url)
+  // 移除Markdown图片语法 ![alt](url) 或 ![alt](url "title")
   text = text.replace(/!\[([^\]]*)\]\([^\)]+\)/g, '')
+  
+  // 移除图片URL（包括各种格式）
+  // 匹配类似 http://..., https://..., /uploads/..., 文件名.jpg 等
+  text = text.replace(/https?:\/\/[^\s]+/g, '') // HTTP/HTTPS URL
+  text = text.replace(/\/uploads\/[^\s]+/g, '') // 相对路径
+  text = text.replace(/[^\s]+\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)(\?[^\s]*)?/gi, '') // 图片文件名
+  
+  // 移除仅包含文件名的行（如：1000001097.jpg）
+  text = text.replace(/^[\w\-]+\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)\s*$/gim, '')
   
   // 移除Markdown标题标记
   text = text.replace(/^#{1,6}\s+/gm, '')
@@ -463,7 +472,7 @@ const getPlainTextSummary = (content) => {
   text = text.replace(/^[\*\-\+]\s+/gm, '')
   text = text.replace(/^\d+\.\s+/gm, '')
   
-  // 移除多余的空白字符
+  // 移除多余的空白字符和换行
   text = text.replace(/\s+/g, ' ').trim()
   
   // 截取前120个字符
