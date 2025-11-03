@@ -6,13 +6,47 @@
 
     <!-- 发表评论表单 -->
     <el-card v-if="userStore.isLoggedIn" class="comment-form-card" shadow="never">
-      <el-input
-        v-model="newComment"
-        type="textarea"
-        :rows="4"
-        placeholder="写下你的评论..."
-        :disabled="submitting"
-      />
+      <div class="comment-input-wrapper">
+        <el-input
+          v-model="newComment"
+          type="textarea"
+          :rows="4"
+          placeholder="写下你的评论..."
+          :disabled="submitting"
+          ref="commentTextareaRef"
+        />
+        <div class="input-toolbar">
+          <el-popover
+            v-model:visible="showEmojiPicker"
+            placement="top"
+            :width="300"
+            trigger="manual"
+          >
+            <template #reference>
+              <el-button 
+                text 
+                size="small" 
+                @click="showEmojiPicker = !showEmojiPicker"
+                type="primary"
+              >
+                😊 表情
+              </el-button>
+            </template>
+            <div class="emoji-picker">
+              <div class="emoji-grid">
+                <span 
+                  v-for="emoji in emojis" 
+                  :key="emoji"
+                  class="emoji-item"
+                  @click="insertEmoji(emoji, 'newComment')"
+                >
+                  {{ emoji }}
+                </span>
+              </div>
+            </div>
+          </el-popover>
+        </div>
+      </div>
       <div class="form-actions">
         <el-button 
           type="primary" 
@@ -36,22 +70,59 @@
       
       <div v-for="comment in comments" :key="comment.id" class="comment-item">
         <div class="comment-avatar">
-          <el-avatar :size="40">{{ comment.user?.username?.charAt(0).toUpperCase() }}</el-avatar>
+          <UserAvatar
+            :avatar="comment.user?.avatar"
+            :username="comment.user?.username"
+            :nickname="comment.user?.nickname"
+            size="medium"
+          />
         </div>
         <div class="comment-content">
           <div class="comment-meta">
             <span class="username">{{ comment.user?.nickname || comment.user?.username }}</span>
             <span class="date">{{ formatDate(comment.created_at) }}</span>
           </div>
-          <div class="comment-text" v-if="editingCommentId !== comment.id">
-            {{ comment.content }}
-          </div>
+          <div class="comment-text" v-if="editingCommentId !== comment.id" v-html="renderContent(comment.content)"></div>
           <div v-else class="comment-edit">
-            <el-input
-              v-model="editContent"
-              type="textarea"
-              :rows="3"
-            />
+            <div class="comment-input-wrapper">
+              <el-input
+                v-model="editContent"
+                type="textarea"
+                :rows="3"
+                ref="editTextareaRef"
+              />
+              <div class="input-toolbar">
+                <el-popover
+                  v-model:visible="showEmojiPicker"
+                  placement="top"
+                  :width="300"
+                  trigger="manual"
+                >
+                  <template #reference>
+                    <el-button 
+                      text 
+                      size="small" 
+                      @click="showEmojiPicker = !showEmojiPicker"
+                      type="primary"
+                    >
+                      😊 表情
+                    </el-button>
+                  </template>
+                  <div class="emoji-picker">
+                    <div class="emoji-grid">
+                      <span 
+                        v-for="emoji in emojis" 
+                        :key="emoji"
+                        class="emoji-item"
+                        @click="insertEmoji(emoji, 'editContent')"
+                      >
+                        {{ emoji }}
+                      </span>
+                    </div>
+                  </div>
+                </el-popover>
+              </div>
+            </div>
             <div class="edit-actions">
               <el-button size="small" @click="cancelEdit">取消</el-button>
               <el-button size="small" type="primary" @click="saveEdit(comment.id)">保存</el-button>
@@ -90,12 +161,46 @@
 
           <!-- 回复表单 -->
           <div v-if="replyingTo === comment.id" class="reply-form">
-            <el-input
-              v-model="replyContent"
-              type="textarea"
-              :rows="3"
-              :placeholder="`回复 ${comment.user?.nickname || comment.user?.username}...`"
-            />
+            <div class="comment-input-wrapper">
+              <el-input
+                v-model="replyContent"
+                type="textarea"
+                :rows="3"
+                :placeholder="`回复 ${comment.user?.nickname || comment.user?.username}...`"
+                ref="replyTextareaRef"
+              />
+              <div class="input-toolbar">
+                <el-popover
+                  v-model:visible="showEmojiPicker"
+                  placement="top"
+                  :width="300"
+                  trigger="manual"
+                >
+                  <template #reference>
+                    <el-button 
+                      text 
+                      size="small" 
+                      @click="showEmojiPicker = !showEmojiPicker"
+                      type="primary"
+                    >
+                      😊 表情
+                    </el-button>
+                  </template>
+                  <div class="emoji-picker">
+                    <div class="emoji-grid">
+                      <span 
+                        v-for="emoji in emojis" 
+                        :key="emoji"
+                        class="emoji-item"
+                        @click="insertEmoji(emoji, 'replyContent')"
+                      >
+                        {{ emoji }}
+                      </span>
+                    </div>
+                  </div>
+                </el-popover>
+              </div>
+            </div>
             <div class="form-actions">
               <el-button size="small" @click="cancelReply">取消</el-button>
               <el-button 
@@ -114,15 +219,29 @@
           <div v-if="comment.replies && comment.replies.length > 0" class="replies-list">
             <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
               <div class="comment-avatar">
-                <el-avatar :size="32">{{ reply.user?.username?.charAt(0).toUpperCase() }}</el-avatar>
+                <UserAvatar
+                  :avatar="reply.user?.avatar"
+                  :username="reply.user?.username"
+                  :nickname="reply.user?.nickname"
+                  size="small"
+                />
               </div>
               <div class="comment-content">
                 <div class="comment-meta">
                   <span class="username">{{ reply.user?.nickname || reply.user?.username }}</span>
                   <span class="date">{{ formatDate(reply.created_at) }}</span>
                 </div>
-                <div class="comment-text">{{ reply.content }}</div>
+                <div class="comment-text" v-html="renderContent(reply.content)"></div>
                 <div class="comment-actions">
+                  <el-button 
+                    text 
+                    size="small"
+                    @click="showReplyForm(reply.id)"
+                    v-if="userStore.isLoggedIn"
+                  >
+                    <el-icon><ChatLineRound /></el-icon>
+                    回复
+                  </el-button>
                   <el-button 
                     text 
                     size="small"
@@ -134,6 +253,62 @@
                     删除
                   </el-button>
                 </div>
+                
+                <!-- 回复的回复表单 -->
+                <div v-if="replyingTo === reply.id" class="reply-form">
+                  <div class="comment-input-wrapper">
+                    <el-input
+                      v-model="replyContent"
+                      type="textarea"
+                      :rows="3"
+                      :placeholder="`回复 ${reply.user?.nickname || reply.user?.username}...`"
+                      ref="replyTextareaRef"
+                    />
+                    <div class="input-toolbar">
+                      <el-popover
+                        v-model:visible="showEmojiPicker"
+                        placement="top"
+                        :width="300"
+                        trigger="manual"
+                      >
+                        <template #reference>
+                          <el-button 
+                            text 
+                            size="small" 
+                            @click="showEmojiPicker = !showEmojiPicker"
+                            type="primary"
+                          >
+                            😊 表情
+                          </el-button>
+                        </template>
+                        <div class="emoji-picker">
+                          <div class="emoji-grid">
+                            <span 
+                              v-for="emoji in emojis" 
+                              :key="emoji"
+                              class="emoji-item"
+                              @click="insertEmoji(emoji, 'replyContent')"
+                            >
+                              {{ emoji }}
+                            </span>
+                          </div>
+                        </div>
+                      </el-popover>
+                    </div>
+                  </div>
+                  <div class="form-actions">
+                    <el-button size="small" @click="cancelReply">取消</el-button>
+                    <el-button 
+                      size="small" 
+                      type="primary" 
+                      @click="submitReply(reply.id)"
+                      :loading="submitting"
+                      :disabled="!replyContent.trim()"
+                    >
+                      发表回复
+                    </el-button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -144,11 +319,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ChatLineRound, Edit, Delete } from '@element-plus/icons-vue'
 import { commentAPI } from '@/api/comment'
 import { useUserStore } from '@/stores/user'
+import UserAvatar from '@/components/UserAvatar.vue'
 
 const props = defineProps({
   articleId: {
@@ -169,6 +346,211 @@ const replyingTo = ref(null)
 const replyContent = ref('')
 const editingCommentId = ref(null)
 const editContent = ref('')
+const showEmojiPicker = ref(false)
+const commentTextareaRef = ref(null)
+const replyTextareaRef = ref(null)
+
+// 表情包列表
+const emojis = [
+  '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃',
+  '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙',
+  '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔',
+  '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥',
+  '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮',
+  '🤧', '🥵', '🥶', '😶‍🌫️', '😵', '😵‍💫', '🤯', '🤠', '🥳', '🥸',
+  '😎', '🤓', '🧐', '😕', '😟', '🙁', '☹️', '😮', '😯', '😲',
+  '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱',
+  '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠',
+  '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻',
+  '👽', '👾', '🤖', '😺', '😸', '😹', '😻', '😼', '😽', '🙀',
+  '😿', '😾', '💋', '💌', '💘', '💝', '💖', '💗', '💓', '💞',
+  '💕', '💟', '❣️', '💔', '❤️', '🧡', '💛', '💚', '💙', '💜',
+  '🤎', '🖤', '🤍', '💯', '💢', '💥', '💫', '💦', '💨', '🕳️',
+  '💣', '💬', '👁️‍🗨️', '🗨️', '🗯️', '💭', '💤', '👋', '🤚', '🖐️',
+  '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙',
+  '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊',
+  '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅',
+  '🤳', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '👶',
+  '👧', '🧒', '👦', '👩', '🧑', '👨', '👩‍🦱', '🧑‍🦱', '👨‍🦱', '👩‍🦰',
+  '🧑‍🦰', '👨‍🦰', '👱‍♀️', '👱', '👱‍♂️', '👩‍🦳', '🧑‍🦳', '👨‍🦳', '👩‍🦲', '🧑‍🦲',
+  '👨‍🦲', '🧔', '👵', '🧓', '👴', '👲', '👳‍♀️', '👳', '👳‍♂️', '🧕',
+  '👮‍♀️', '👮', '👮‍♂️', '👷‍♀️', '👷', '👷‍♂️', '💂‍♀️', '💂', '💂‍♂️', '🕵️‍♀️',
+  '🕵️', '🕵️‍♂️', '👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍🌾', '🧑‍🌾', '👨‍🌾', '👩‍🍳', '🧑‍🍳',
+  '👨‍🍳', '👩‍🎓', '🧑‍🎓', '👨‍🎓', '👩‍🎤', '🧑‍🎤', '👨‍🎤', '👩‍🏫', '🧑‍🏫', '👨‍🏫',
+  '👩‍🏭', '🧑‍🏭', '👨‍🏭', '👩‍💻', '🧑‍💻', '👨‍💻', '👩‍💼', '🧑‍💼', '👨‍💼', '👩‍🔧',
+  '🧑‍🔧', '👨‍🔧', '👩‍🔬', '🧑‍🔬', '👨‍🔬', '👩‍🎨', '🧑‍🎨', '👨‍🎨', '👩‍🚒', '🧑‍🚒',
+  '👨‍🚒', '👩‍✈️', '🧑‍✈️', '👨‍✈️', '👩‍🚀', '🧑‍🚀', '👨‍🚀', '👩‍⚖️', '🧑‍⚖️', '👨‍⚖️',
+  '👰', '🤵', '👸', '🤴', '🦸‍♀️', '🦸', '🦸‍♂️', '🦹‍♀️', '🦹', '🦹‍♂️',
+  '🤶', '🎅', '🧙‍♀️', '🧙', '🧙‍♂️', '🧝‍♀️', '🧝', '🧝‍♂️', '🧛‍♀️', '🧛',
+  '🧛‍♂️', '🧟‍♀️', '🧟', '🧟‍♂️', '🧞‍♀️', '🧞', '🧞‍♂️', '🧜‍♀️', '🧜', '🧜‍♂️',
+  '🧚‍♀️', '🧚', '🧚‍♂️', '👼', '🤰', '🤱', '👩‍🍼', '🧑‍🍼', '👨‍🍼', '🙇‍♀️',
+  '🙇', '🙇‍♂️', '💁‍♀️', '💁', '💁‍♂️', '🙅‍♀️', '🙅', '🙅‍♂️', '🙆‍♀️', '🙆',
+  '🙆‍♂️', '🙋‍♀️', '🙋', '🙋‍♂️', '🧏‍♀️', '🧏', '🧏‍♂️', '🤦‍♀️', '🤦', '🤦‍♂️',
+  '🤷‍♀️', '🤷', '🤷‍♂️', '🧑‍🤝‍🧑', '👭', '👫', '👬', '💏', '💑', '👪',
+  '👨‍👩‍👧', '👨‍👩‍👧‍👦', '👨‍👩‍👦‍👦', '👨‍👩‍👧‍👧', '👩‍👩‍👦', '👩‍👩‍👧', '👩‍👩‍👧‍👦', '👩‍👩‍👦‍👦', '👩‍👩‍👧‍👧', '👨‍👨‍👦',
+  '👨‍👨‍👧', '👨‍👨‍👧‍👦', '👨‍👨‍👦‍👦', '👨‍👨‍👧‍👧', '👩‍👦', '👩‍👧', '👩‍👧‍👦', '👩‍👦‍👦', '👩‍👧‍👧', '👨‍👦',
+  '👨‍👧', '👨‍👧‍👦', '👨‍👦‍👦', '👨‍👧‍👧', '🗣️', '👤', '👥', '👣', '🌍', '🌎',
+  '🌏', '🗺️', '🧭', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️',
+  '🏝️', '🏞️', '🏟️', '🏛️', '🏗️', '🧱', '🏘️', '🏚️', '🏠', '🏡',
+  '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬',
+  '🏭', '🏯', '🏰', '💒', '🗼', '🗽', '⛪', '🕌', '🛕', '🕍',
+  '⛩️', '🕋', '⛲', '⛺', '🌁', '🌃', '🏙️', '🌄', '🌅', '🌆',
+  '🌇', '🌉', '♨️', '🎠', '🎡', '🎢', '💈', '🎪', '🚂', '🚃',
+  '🚄', '🚅', '🚆', '🚇', '🚈', '🚉', '🚊', '🚝', '🚞', '🚋',
+  '🚌', '🚍', '🚎', '🚐', '🚑', '🚒', '🚓', '🚔', '🚕', '🚖',
+  '🚗', '🚘', '🚙', '🚚', '🚛', '🚜', '🏎️', '🏍️', '🛵', '🚲',
+  '🛴', '🛹', '🛼', '🚁', '🛸', '✈️', '🛫', '🛬', '🪂', '💺',
+  '🚢', '⛵', '🛥️', '🛳️', '⛴️', '🚤', '🛶', '🚁', '🚟', '🚠',
+  '🚡', '🛰️', '🚀', '🛸', '🎆', '🎇', '🎈', '🎉', '🎊', '🎋',
+  '🎍', '🎎', '🎏', '🎐', '🎑', '🧧', '🎀', '🎁', '🎗️', '🎟️',
+  '🎫', '🎖️', '🏆', '🏅', '🥇', '🥈', '🥉', '⚽', '⚾', '🥎',
+  '🏀', '🏐', '🏈', '🏉', '🎾', '🥏', '🎳', '🏏', '🏑', '🏒',
+  '🥍', '🏓', '🏸', '🥊', '🥋', '🥅', '⛳', '⛸️', '🎣', '🤿',
+  '🎽', '🎿', '🛷', '🥌', '🎯', '🎱', '🪀', '🎮', '🕹️', '🎰',
+  '🎲', '🧩', '🧸', '♟️', '🃏', '🀄', '🎴', '🎭', '🖼️', '🎨',
+  '🧵', '🧶', '👓', '🕶️', '🥽', '🥼', '🦺', '👔', '👕', '👖',
+  '🧣', '🧤', '🧥', '🧦', '👗', '👘', '🥻', '🩱', '🩲', '🩳',
+  '👙', '👚', '👛', '👜', '👝', '🛍️', '🎒', '👞', '👟', '🥾',
+  '🥿', '👠', '👡', '🩰', '👢', '🪖', '⛑️', '🎩', '🎓', '🧢',
+  '👑', '💎', '⚖️', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️',
+  '🧰', '🧲', '🪚', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️',
+  '🛡️', '🚬', '⚰️', '🪦', '⚱️', '🏺', '🔮', '📿', '🧿', '💈',
+  '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬',
+  '🦠', '🧫', '🧪', '🌡️', '🧹', '🪠', '🧺', '🧻', '🚽', '🚿',
+  '🛁', '🛀', '🧼', '🪥', '🪒', '🧽', '🧴', '🛎️', '🔑', '🗝️',
+  '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🪆', '🖼️', '🪞', '🪟',
+  '🛍️', '🛒', '🎁', '🎈', '🎉', '🎊', '🎀', '🎗️', '🏆', '🥇',
+  '🥈', '🥉', '⚽', '🏀', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓',
+  '🏸', '🥅', '⛳', '🏌️', '🏌️‍♂️', '🏌️‍♀️', '🏄', '🏄‍♂️', '🏄‍♀️', '🏊',
+  '🏊‍♂️', '🏊‍♀️', '⛷️', '🏂', '🪂', '🏋️', '🏋️‍♂️', '🏋️‍♀️', '🚴', '🚴‍♂️',
+  '🚴‍♀️', '🚵', '🚵‍♂️', '🚵‍♀️', '🤸', '🤸‍♂️', '🤸‍♀️', '🤽', '🤽‍♂️', '🤽‍♀️',
+  '🤾', '🤾‍♂️', '🤾‍♀️', '🤹', '🤹‍♂️', '🤹‍♀️', '🧘', '🧘‍♂️', '🧘‍♀️', '🛀',
+  '🛌', '👭', '👫', '👬', '💏', '💑', '👪', '🗣️', '👤', '👥',
+  '👣', '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨',
+  '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊',
+  '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉',
+  '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞',
+  '🐜', '🪰', '🪱', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎',
+  '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟',
+  '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧',
+  '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂',
+  '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩',
+  '🦮', '🐕‍🦺', '🐈', '🐈‍⬛', '🪶', '🐓', '🦃', '🦤', '🦚', '🦜',
+  '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦫', '🦦', '🦥',
+  '🐁', '🐀', '🐿️', '🦔', '🐾', '🐉', '🐲', '🌵', '🎄', '🌲',
+  '🌳', '🌴', '🪵', '🌱', '🌿', '☘️', '🍀', '🎍', '🪴', '🎋',
+  '🍃', '🍂', '🍁', '🍄', '🐚', '🪨', '🌾', '💐', '🌷', '🌹',
+  '🥀', '🌺', '🌻', '🌼', '🌷', '🌱', '🌿', '🍀', '☘️', '🍃',
+  '🍂', '🍁', '🍄', '🌰', '🪵', '🦀', '🦞', '🦐', '🦑', '🦪',
+  '🍇', '🍈', '🍉', '🍊', '🍋', '🍌', '🍍', '🥭', '🍎', '🍏',
+  '🍐', '🍑', '🍒', '🍓', '🫐', '🥝', '🍅', '🥥', '🥑', '🍆',
+  '🥔', '🥕', '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅',
+  '🍄', '🥜', '🌰', '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞',
+  '🧇', '🍳', '🥚', '🧀', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭',
+  '🍔', '🍟', '🍕', '🫔', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔',
+  '🥗', '🥘', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟',
+  '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡',
+  '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬',
+  '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '🫖',
+  '☕', '🍵', '🧃', '🥤', '🧋', '🍶', '🍺', '🍻', '🥂', '🍷',
+  '🥃', '🍸', '🍹', '🧉', '🍾', '🧊', '🥄', '🍴', '🍽️', '🥣',
+  '🥡', '🥢', '🪣', '🧂', '⚽', '🏀', '⚾', '🥎', '🏐', '🏈',
+  '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🥅', '⛳', '🏌️', '🏄',
+  '🏊', '⛷️', '🏂', '🪂', '🏋️', '🚴', '🚵', '🤸', '🤽', '🤾',
+  '🤹', '🧘', '🛀', '🛌', '👭', '👫', '👬', '💏', '💑', '👪',
+  '🗣️', '👤', '👥', '👣', '🌍', '🌎', '🌏', '🗺️', '🧭', '🏔️',
+  '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🏞️', '🏟️', '🏛️',
+  '🏗️', '🧱', '🏘️', '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥',
+  '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒',
+  '🗼', '🗽', '⛪', '🕌', '🛕', '🕍', '⛩️', '🕋', '⛲', '⛺',
+  '🌁', '🌃', '🏙️', '🌄', '🌅', '🌆', '🌇', '🌉', '♨️', '🎠',
+  '🎡', '🎢', '💈', '🎪', '🚂', '🚃', '🚄', '🚅', '🚆', '🚇',
+  '🚈', '🚉', '🚊', '🚝', '🚞', '🚋', '🚌', '🚍', '🚎', '🚐',
+  '🚑', '🚒', '🚓', '🚔', '🚕', '🚖', '🚗', '🚘', '🚙', '🚚',
+  '🚛', '🚜', '🏎️', '🏍️', '🛵', '🚲', '🛴', '🛹', '🛼', '🚁',
+  '🛸', '✈️', '🛫', '🛬', '🪂', '💺', '🚢', '⛵', '🛥️', '🛳️',
+  '⛴️', '🚤', '🛶', '🚁', '🚟', '🚠', '🚡', '🛰️', '🚀', '🛸',
+  '🎆', '🎇', '🎈', '🎉', '🎊', '🎋', '🎍', '🎎', '🎏', '🎐',
+  '🎑', '🧧', '🎀', '🎁', '🎗️', '🎟️', '🎫', '🎖️', '🏆', '🏅',
+  '🥇', '🥈', '🥉', '⚽', '⚾', '🥎', '🏀', '🏐', '🏈', '🏉',
+  '🎾', '🥏', '🎳', '🏏', '🏑', '🏒', '🥍', '🏓', '🏸', '🥊',
+  '🥋', '🥅', '⛳', '⛸️', '🎣', '🤿', '🎽', '🎿', '🛷', '🥌',
+  '🎯', '🎱', '🪀', '🎮', '🕹️', '🎰', '🎲', '🧩', '🧸', '♟️',
+  '🃏', '🀄', '🎴', '🎭', '🖼️', '🎨', '🧵', '🧶', '👓', '🕶️',
+  '🥽', '🥼', '🦺', '👔', '👕', '👖', '🧣', '🧤', '🧥', '🧦',
+  '👗', '👘', '🥻', '🩱', '🩲', '🩳', '👙', '👚', '👛', '👜',
+  '👝', '🛍️', '🎒', '👞', '👟', '🥾', '🥿', '👠', '👡', '🩰',
+  '👢', '🪖', '⛑️', '🎩', '🎓', '🧢', '👑', '💎', '⚖️', '🔧',
+  '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧰', '🧲', '🪚', '🔫',
+  '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '🪦',
+  '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️',
+  '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️',
+  '🧹', '🪠', '🧺', '🧻', '🚽', '🚿', '🛁', '🛀', '🧼', '🪥',
+  '🪒', '🧽', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️',
+  '🛌', '🧸', '🪆', '🖼️', '🪞', '🪟', '🛍️', '🛒', '🎁', '🎈',
+  '🎉', '🎊', '🎀', '🎗️', '🏆', '🥇', '🥈', '🥉'
+]
+
+// 插入表情到输入框
+const insertEmoji = (emoji, target) => {
+  if (target === 'newComment') {
+    const textarea = commentTextareaRef.value?.$el?.querySelector('textarea')
+    if (textarea) {
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      newComment.value = newComment.value.substring(0, start) + emoji + newComment.value.substring(end)
+      nextTick(() => {
+        textarea.focus()
+        const newPos = start + emoji.length
+        textarea.setSelectionRange(newPos, newPos)
+      })
+    } else {
+      newComment.value += emoji
+    }
+  } else if (target === 'replyContent') {
+    const textarea = replyTextareaRef.value?.$el?.querySelector('textarea')
+    if (textarea) {
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      replyContent.value = replyContent.value.substring(0, start) + emoji + replyContent.value.substring(end)
+      nextTick(() => {
+        textarea.focus()
+        const newPos = start + emoji.length
+        textarea.setSelectionRange(newPos, newPos)
+      })
+    } else {
+      replyContent.value += emoji
+    }
+  } else if (target === 'editContent') {
+    const textarea = editTextareaRef.value?.$el?.querySelector('textarea')
+    if (textarea) {
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      editContent.value = editContent.value.substring(0, start) + emoji + editContent.value.substring(end)
+      nextTick(() => {
+        textarea.focus()
+        const newPos = start + emoji.length
+        textarea.setSelectionRange(newPos, newPos)
+      })
+    } else {
+      editContent.value += emoji
+    }
+  }
+  showEmojiPicker.value = false
+}
+
+// 渲染内容（支持表情和基本HTML）
+const renderContent = (content) => {
+  if (!content) return ''
+  // 转义HTML，但保留换行
+  return content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>')
+}
+
+const editTextareaRef = ref(null)
 
 const loadComments = async () => {
   try {
@@ -213,16 +595,20 @@ const cancelReply = () => {
 const submitReply = async (parentId) => {
   try {
     submitting.value = true
-    await commentAPI.createComment({
+    // 确保 parent_id 被正确传递
+    const payload = {
       content: replyContent.value,
       article_id: props.articleId,
       parent_id: parentId
-    })
+    }
+    console.log('提交回复:', payload) // 调试日志
+    await commentAPI.createComment(payload)
     ElMessage.success('回复发表成功')
     cancelReply()
     loadComments()
   } catch (error) {
-    console.error(error)
+    console.error('回复失败:', error)
+    ElMessage.error(error.response?.data?.error || '回复失败，请重试')
   } finally {
     submitting.value = false
   }
@@ -453,6 +839,52 @@ onMounted(() => {
   border-radius: 16px;
   border: 1px solid rgba(255, 182, 193, 0.2);
   background: rgba(255, 255, 255, 0.9);
+}
+
+.comment-input-wrapper {
+  position: relative;
+}
+
+.input-toolbar {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.emoji-picker {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+}
+
+.emoji-item {
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px;
+  text-align: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.emoji-item:hover {
+  background: rgba(255, 182, 193, 0.3);
+}
+
+@media (max-width: 768px) {
+  .emoji-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+  
+  .emoji-item {
+    font-size: 20px;
+  }
 }
 </style>
 
