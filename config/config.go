@@ -47,11 +47,11 @@ var AppConfig = Config{
 		ExpireTime: 24 * time.Hour,
 	},
 	OSS: OSSConfig{
-		Endpoint:        getEnvOrDefault("OSS_ENDPOINT", ""),          // 从环境变量OSS_ENDPOINT读取，或在控制台"概览"中查看"外网访问Endpoint"
-		AccessKeyID:     getEnvOrDefault("OSS_ACCESS_KEY_ID", ""),     // 从环境变量OSS_ACCESS_KEY_ID读取
-		AccessKeySecret: getEnvOrDefault("OSS_ACCESS_KEY_SECRET", ""), // 从环境变量OSS_ACCESS_KEY_SECRET读取
-		BucketName:      getEnvOrDefault("OSS_BUCKET_NAME", ""),       // 从环境变量OSS_BUCKET_NAME读取
-		Domain:          getEnvOrDefault("OSS_DOMAIN", ""),            // 从环境变量OSS_DOMAIN读取，留空使用OSS默认域名
+		Endpoint:        getEnvOrDefault("OSS_ENDPOINT", "oss-cn-beijing.aliyuncs.com"),               // 从环境变量OSS_ENDPOINT读取，或在控制台"概览"中查看"外网访问Endpoint"
+		AccessKeyID:     getEnvOrDefault("OSS_ACCESS_KEY_ID", "LTAI5tGUivbGfUY94gkBQ4K1"),             // 从环境变量OSS_ACCESS_KEY_ID读取
+		AccessKeySecret: getEnvOrDefault("OSS_ACCESS_KEY_SECRET", "2bp4xRlpfxllU8SH8ZmLeADM3lW4RW"),   // 从环境变量OSS_ACCESS_KEY_SECRET读取
+		BucketName:      getEnvOrDefault("OSS_BUCKET_NAME", "zcc-mjh"),                                // 从环境变量OSS_BUCKET_NAME读取
+		Domain:          getEnvOrDefault("OSS_DOMAIN", "https://zcc-mjh.oss-cn-beijing.aliyuncs.com"), // 从环境变量OSS_DOMAIN读取，留空使用OSS默认域名
 	},
 }
 

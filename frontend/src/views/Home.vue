@@ -2,6 +2,67 @@
   <div class="home-container">
     <!-- Hero Section -->
     <section class="hero-section">
+      <!-- 恋爱日记标题图片 -->
+      <div class="diary-title">
+        <img 
+          src="/diary-title.png" 
+          alt="恋爱日记"
+          class="diary-title-img"
+          @error="handleDiaryTitleError"
+        />
+      </div>
+      <!-- 温馨装饰小图片 -->
+      <div class="decorative-images">
+        <!-- 标题左侧装饰 -->
+        <img 
+          src="/decorations/baker-bear.png" 
+          alt=""
+          class="decor-img decor-left"
+          @error="handleDecorError"
+        />
+        <!-- 标题右侧装饰 -->
+        <img 
+          src="/decorations/v-sign-bear.png" 
+          alt=""
+          class="decor-img decor-right"
+          @error="handleDecorError"
+        />
+        <!-- 左上角装饰 -->
+        <img 
+          src="/decorations/look-bear.png" 
+          alt=""
+          class="decor-img decor-top-left"
+          @error="handleDecorError"
+        />
+        <!-- 右上角装饰 -->
+        <img 
+          src="/decorations/sleep-bear.png" 
+          alt=""
+          class="decor-img decor-top-right"
+          @error="handleDecorError"
+        />
+        <!-- 左下角装饰 -->
+        <img 
+          src="/decorations/motorcycle-bear.png" 
+          alt=""
+          class="decor-img decor-bottom-left"
+          @error="handleDecorError"
+        />
+        <!-- 中部左侧装饰 -->
+        <img 
+          src="/decorations/flower-bear.png" 
+          alt=""
+          class="decor-img decor-mid-left"
+          @error="handleDecorError"
+        />
+        <!-- 中部右侧装饰 -->
+        <img 
+          src="/decorations/pink-bear.png" 
+          alt=""
+          class="decor-img decor-mid-right"
+          @error="handleDecorError"
+        />
+      </div>
       <div class="hero-image-container" :class="{ 'hero-fallback': !heroImageLoaded }">
         <!-- 气泡装饰 -->
         <div class="bubbles">
@@ -25,7 +86,42 @@
         <div class="hero-overlay"></div>
         <div class="hero-content">
           <h1 class="hero-title">记录我们</h1>
-          <p class="hero-subtitle">把每一天写成诗，把每一刻都记住</p>
+          <p class="hero-subtitle">把每一天写成诗 把每一刻都记住</p>
+        </div>
+        <!-- 恋爱纪念日 -->
+        <div class="anniversary-card">
+          <div class="anniversary-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+          </div>
+          <div class="anniversary-info">
+            <div class="anniversary-years">第 {{ anniversaryYears }} 年</div>
+            <div class="anniversary-countdown">
+              <div v-if="countdown.days > 0 || countdown.hours > 0 || countdown.minutes > 0 || countdown.seconds > 0" class="countdown-text">
+                距离下一个纪念日还有
+              </div>
+              <div v-else class="countdown-text">今天就是我们的纪念日！</div>
+              <div v-if="countdown.days > 0 || countdown.hours > 0 || countdown.minutes > 0 || countdown.seconds > 0" class="countdown-time">
+                <span v-if="countdown.days > 0" class="time-unit">
+                  <span class="time-value">{{ countdown.days }}</span>
+                  <span class="time-label">天</span>
+                </span>
+                <span v-if="countdown.hours > 0" class="time-unit">
+                  <span class="time-value">{{ countdown.hours }}</span>
+                  <span class="time-label">时</span>
+                </span>
+                <span v-if="countdown.minutes > 0" class="time-unit">
+                  <span class="time-value">{{ countdown.minutes }}</span>
+                  <span class="time-label">分</span>
+                </span>
+                <span class="time-unit">
+                  <span class="time-value">{{ countdown.seconds }}</span>
+                  <span class="time-label">秒</span>
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -139,10 +235,17 @@
               >
                 {{ tag.name }}
               </span>
+              <span v-if="hasVideo(article.content)" class="tag-video" title="包含视频">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                </svg>
+                视频
+              </span>
             </div>
             <h2 class="article-title">{{ article.title }}</h2>
             <p class="article-summary">
-              {{ article.summary || article.content.substring(0, 120) + '...' }}
+              {{ article.summary || getPlainTextSummary(article.content) }}
             </p>
             <div class="article-footer">
               <div class="article-author">
@@ -207,7 +310,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { articleAPI } from '@/api/article'
 import { categoryAPI } from '@/api/category'
@@ -231,6 +334,54 @@ const filters = ref({
 })
 
 const viewMode = ref('list') // 'grid' 或 'list'，默认横向列表
+
+// 恋爱纪念日配置（请修改为你的纪念日）
+const anniversaryDate = new Date('2025-10-25T01:00:00') // 2025年10月25日凌晨1点
+const countdown = ref({
+  days: 0,
+  hours: 0,
+  minutes: 0,
+  seconds: 0
+})
+const anniversaryYears = ref(0)
+let countdownTimer = null
+
+// 计算纪念日相关数据
+const calculateAnniversary = () => {
+  const now = new Date()
+  const thisYear = now.getFullYear()
+  
+  // 计算年份数
+  const yearsDiff = thisYear - anniversaryDate.getFullYear()
+  const thisYearAnniversary = new Date(thisYear, anniversaryDate.getMonth(), anniversaryDate.getDate())
+  const nextYearAnniversary = new Date(thisYear + 1, anniversaryDate.getMonth(), anniversaryDate.getDate())
+  
+  // 如果今年的纪念日还没到，年份数减1
+  if (now < thisYearAnniversary) {
+    anniversaryYears.value = Math.max(0, yearsDiff - 1)
+  } else {
+    anniversaryYears.value = yearsDiff
+  }
+  
+  // 计算倒计时（到下一个纪念日）
+  let targetDate = thisYearAnniversary
+  if (now >= thisYearAnniversary) {
+    targetDate = nextYearAnniversary
+    anniversaryYears.value = yearsDiff + 1
+  }
+  
+  const diff = targetDate - now
+  
+  if (diff <= 0) {
+    // 今天就是纪念日
+    countdown.value = { days: 0, hours: 0, minutes: 0, seconds: 0 }
+  } else {
+    countdown.value.days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    countdown.value.hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    countdown.value.minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    countdown.value.seconds = Math.floor((diff % (1000 * 60)) / 1000)
+  }
+}
 
 const loadArticles = async () => {
   try {
@@ -281,6 +432,48 @@ const formatDate = (dateStr) => {
   return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
 }
 
+// 检查文章内容是否包含视频
+const hasVideo = (content) => {
+  if (!content) return false
+  // 检查是否包含video标签
+  return /<video[\s\S]*?>/i.test(content) || /<source[\s\S]*?>/i.test(content)
+}
+
+// 从Markdown/HTML内容中提取纯文本摘要
+const getPlainTextSummary = (content) => {
+  if (!content) return ''
+  
+  // 移除HTML标签（包括video、img等）
+  let text = content.replace(/<[^>]*>/g, '')
+  
+  // 移除Markdown代码块
+  text = text.replace(/```[\s\S]*?```/g, '')
+  text = text.replace(/`[^`]+`/g, '')
+  
+  // 移除Markdown链接语法 [text](url)
+  text = text.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+  
+  // 移除Markdown图片语法 ![alt](url)
+  text = text.replace(/!\[([^\]]*)\]\([^\)]+\)/g, '')
+  
+  // 移除Markdown标题标记
+  text = text.replace(/^#{1,6}\s+/gm, '')
+  
+  // 移除Markdown列表标记
+  text = text.replace(/^[\*\-\+]\s+/gm, '')
+  text = text.replace(/^\d+\.\s+/gm, '')
+  
+  // 移除多余的空白字符
+  text = text.replace(/\s+/g, ' ').trim()
+  
+  // 截取前120个字符
+  if (text.length > 120) {
+    text = text.substring(0, 120) + '...'
+  }
+  
+  return text || '暂无摘要'
+}
+
 const getCoverImageUrl = (url) => {
   if (!url) return ''
   if (url.startsWith('/uploads')) {
@@ -307,6 +500,20 @@ const handleHeroImageLoad = () => {
   heroImageLoaded.value = true
 }
 
+const handleDiaryTitleError = (e) => {
+  // 如果恋爱日记标题图片加载失败，隐藏标题容器
+  if (e.target) {
+    e.target.style.display = 'none'
+  }
+}
+
+const handleDecorError = (e) => {
+  // 如果装饰图片加载失败，隐藏该图片
+  if (e.target) {
+    e.target.style.display = 'none'
+  }
+}
+
 // 尝试加载图片（检查图片是否存在）
 const checkHeroImage = () => {
   const img = new Image()
@@ -330,6 +537,19 @@ onMounted(() => {
   loadCategories()
   loadTags()
   checkHeroImage()
+  
+  // 初始化纪念日计算
+  calculateAnniversary()
+  // 每秒更新倒计时
+  countdownTimer = setInterval(() => {
+    calculateAnniversary()
+  }, 1000)
+})
+
+onUnmounted(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+  }
 })
 </script>
 
@@ -346,14 +566,221 @@ onMounted(() => {
   width: 100%;
   margin-bottom: 0;
   overflow: hidden;
+  position: relative;
+}
+
+/* 恋爱日记标题图片 */
+.diary-title {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: 100%;
+  text-align: center;
+  pointer-events: none;
+}
+
+.diary-title-img {
+  max-width: 500px;
+  width: auto;
+  height: auto;
+  max-height: 150px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+  animation: gentleFloat 4s ease-in-out infinite;
+}
+
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* 温馨装饰小图片 */
+.decorative-images {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.decor-img {
+  position: absolute;
+  width: auto;
+  height: auto;
+  max-width: 120px;
+  max-height: 120px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
+  opacity: 0.85;
+  animation: decorFloat 5s ease-in-out infinite;
+}
+
+/* 标题左侧装饰 */
+.decor-left {
+  top: 50%;
+  left: 14%;
+  transform: translateY(-50%) translateX(0px);
+  max-width: 130px;
+  max-height: 130px;
+  animation: decorFloat 4s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+/* 标题右侧装饰 */
+.decor-right {
+  top: 55%;
+  right: 15%;
+  transform: translateY(-50%) translateX(20px);
+  max-width: 140px;
+  max-height: 140px;
+  animation: decorFloat 4.5s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
+/* 左上角装饰 */
+.decor-top-left {
+  top: 80px;
+  left: 8%;
+  max-width: 90px;
+  max-height: 90px;
+  animation: decorFloat 5s ease-in-out infinite;
+  animation-delay: 0.3s;
+}
+
+/* 右上角装饰 */
+.decor-top-right {
+  top: 80px;
+  right: 8%;
+  max-width: 90px;
+  max-height: 90px;
+  animation: decorFloat 4.8s ease-in-out infinite;
+  animation-delay: 0.7s;
+}
+
+/* 左下角装饰 */
+.decor-bottom-left {
+  bottom: 120px;
+  left: 8%;
+  max-width: 110px;
+  max-height: 110px;
+  animation: decorFloat 5.2s ease-in-out infinite;
+  animation-delay: 1.2s;
+}
+
+/* 中部左侧装饰 */
+.decor-mid-left {
+  top: 35%;
+  left: 5%;
+  max-width: 100px;
+  max-height: 100px;
+  animation: decorFloatMidLeft 4.5s ease-in-out infinite;
+  animation-delay: 0.8s;
+}
+
+/* 中部右侧装饰 */
+.decor-mid-right {
+  top: 35%;
+  right: 5%;
+  max-width: 100px;
+  max-height: 100px;
+  animation: decorFloatMidRight 5s ease-in-out infinite;
+  animation-delay: 1.5s;
+}
+
+@keyframes decorFloat {
+  0%, 100% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-6px) translateX(3px) rotate(2deg);
+  }
+  50% {
+    transform: translateY(-10px) translateX(0) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-6px) translateX(-3px) rotate(-2deg);
+  }
+}
+
+/* 为不同位置的装饰保留各自的transform */
+.decor-left {
+  animation-name: decorFloatLeft;
+}
+
+.decor-right {
+  animation-name: decorFloatRight;
+}
+
+@keyframes decorFloatLeft {
+  0%, 100% {
+    transform: translateY(-50%) translateX(-20px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-50%) translateX(-25px) rotate(3deg);
+  }
+}
+
+@keyframes decorFloatRight {
+  0%, 100% {
+    transform: translateY(-50%) translateX(20px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-50%) translateX(25px) rotate(-3deg);
+  }
+}
+
+.decor-mid-left {
+  animation-name: decorFloatMidLeft;
+}
+
+.decor-mid-right {
+  animation-name: decorFloatMidRight;
+}
+
+@keyframes decorFloatMidLeft {
+  0%, 100% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-8px) translateX(5px) rotate(3deg);
+  }
+  50% {
+    transform: translateY(-12px) translateX(0) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-8px) translateX(-5px) rotate(-3deg);
+  }
+}
+
+@keyframes decorFloatMidRight {
+  0%, 100% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-8px) translateX(-5px) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-12px) translateX(0) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-8px) translateX(5px) rotate(3deg);
+  }
 }
 
 .hero-image-container {
   position: relative;
   width: 100%;
-  height: 80vh;
-  max-height: 800px;
-  min-height: 500px;
+  height: 90vh;
+  max-height: 900px;
+  min-height: 600px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -559,9 +986,142 @@ onMounted(() => {
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
 }
 
+/* 恋爱纪念日卡片 */
+.anniversary-card {
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 18px;
+  padding: 16px 20px;
+  box-shadow: 
+    0 8px 32px rgba(255, 182, 193, 0.25),
+    0 4px 16px rgba(255, 182, 193, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  border: 1.5px solid rgba(255, 182, 193, 0.35);
+  z-index: 4;
+  min-width: 220px;
+  max-width: 240px;
+  animation: floatIn 1s ease-out;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.anniversary-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 
+    0 16px 56px rgba(255, 182, 193, 0.4),
+    0 8px 28px rgba(255, 182, 193, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+@keyframes floatIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.anniversary-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, #ff6b9d 0%, #ff8fab 100%);
+  border-radius: 50%;
+  margin: 0 auto 12px;
+  box-shadow: 
+    0 6px 20px rgba(255, 107, 157, 0.35),
+    inset 0 2px 6px rgba(255, 255, 255, 0.3);
+  color: #fff;
+  animation: heartbeat 2s ease-in-out infinite;
+}
+
+.anniversary-icon svg {
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.anniversary-icon svg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.anniversary-info {
+  text-align: center;
+}
+
+.anniversary-years {
+  font-size: 22px;
+  font-weight: 600;
+  color: #ff6b9d;
+  margin-bottom: 10px;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 6px rgba(255, 107, 157, 0.2);
+}
+
+.anniversary-countdown {
+  font-size: 11px;
+  color: #86868b;
+  line-height: 1.5;
+}
+
+.countdown-text {
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #8b5a3c;
+  font-size: 11px;
+}
+
+.countdown-time {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.time-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 32px;
+}
+
+.time-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ff6b9d;
+  line-height: 1;
+  margin-bottom: 2px;
+  text-shadow: 0 2px 4px rgba(255, 107, 157, 0.2);
+}
+
+.time-label {
+  font-size: 10px;
+  color: #86868b;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+}
+
 /* Filters - 温馨风格 */
 .filters-section {
-  padding: 60px 22px;
+  padding: 30px 22px;
   background: transparent;
   border-bottom: none;
   position: relative;
@@ -636,7 +1196,7 @@ onMounted(() => {
 
 /* Articles Section - 温馨风格 */
 .articles-section {
-  padding: 80px 22px;
+  padding: 20px 22px 80px 22px;
   background: transparent;
   position: relative;
 }
@@ -965,6 +1525,36 @@ onMounted(() => {
     inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
+.tag-video {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #ff6b9d;
+  background: linear-gradient(135deg, rgba(255, 107, 157, 0.15) 0%, rgba(255, 182, 193, 0.12) 100%);
+  border-radius: 20px;
+  letter-spacing: -0.01em;
+  border: 1.5px solid rgba(255, 107, 157, 0.25);
+  box-shadow: 
+    0 2px 8px rgba(255, 107, 157, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tag-video:hover {
+  transform: translateY(-1px);
+  box-shadow: 
+    0 4px 12px rgba(255, 107, 157, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.tag-video svg {
+  flex-shrink: 0;
+}
+
 .article-title {
   font-size: 24px;
   font-weight: 600;
@@ -1125,9 +1715,82 @@ onMounted(() => {
 
 /* Responsive */
 @media (max-width: 768px) {
+  .diary-title {
+    top: 15px;
+  }
+
+  .diary-title-img {
+    max-width: 280px;
+    max-height: 100px;
+  }
+
+  /* 移动端装饰图片调整 */
+  .decor-img {
+    max-width: 70px;
+    max-height: 70px;
+    opacity: 0.75;
+  }
+
+  .decor-left,
+  .decor-right {
+    max-width: 75px;
+    max-height: 75px;
+    top: 45%;
+  }
+
+  .decor-left {
+    left: 10%;
+    transform: translateY(-50%) translateX(0px);
+  }
+
+  .decor-right {
+    right: 10%;
+    transform: translateY(-50%) translateX(10px);
+    top: 52%;
+    max-width: 90px;
+    max-height: 90px;
+  }
+
+  .decor-top-left,
+  .decor-top-right {
+    max-width: 50px;
+    max-height: 50px;
+    top: 60px;
+  }
+
+  .decor-top-left {
+    left: 5%;
+  }
+
+  .decor-top-right {
+    right: 5%;
+  }
+
+  .decor-bottom-left {
+    bottom: 100px;
+    left: 5%;
+    max-width: 65px;
+    max-height: 65px;
+  }
+
+  .decor-mid-left,
+  .decor-mid-right {
+    top: 35%;
+    max-width: 60px;
+    max-height: 60px;
+  }
+
+  .decor-mid-left {
+    left: 3%;
+  }
+
+  .decor-mid-right {
+    right: 3%;
+  }
+
   .hero-image-container {
-    height: 70vh;
-    min-height: 400px;
+    height: 85vh;
+    min-height: 500px;
     padding: 5vh 5%;
   }
   
@@ -1137,6 +1800,58 @@ onMounted(() => {
 
   .hero-subtitle {
     font-size: 18px;
+  }
+
+  .anniversary-card {
+    bottom: 15px;
+    right: 15px;
+    padding: 12px 16px;
+    min-width: 180px;
+    max-width: 200px;
+    background: rgba(255, 255, 255, 0.88);
+    opacity: 0.9;
+  }
+
+  .anniversary-icon {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 8px;
+  }
+
+  .anniversary-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .anniversary-years {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  .anniversary-countdown {
+    font-size: 10px;
+  }
+
+  .countdown-text {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+
+  .time-value {
+    font-size: 16px;
+  }
+
+  .time-label {
+    font-size: 9px;
+  }
+
+  .countdown-time {
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  .time-unit {
+    min-width: 28px;
   }
 
   .articles-grid {

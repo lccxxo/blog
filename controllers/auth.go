@@ -113,7 +113,3 @@ func GetProfile(c *gin.Context) {
 		},
 	})
 }
-
-
-
-
