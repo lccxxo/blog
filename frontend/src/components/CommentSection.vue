@@ -68,7 +68,13 @@
     <div class="comments-list" v-loading="loading">
       <el-empty v-if="comments.length === 0 && !loading" description="暂无评论，快来抢沙发吧！" />
       
-      <div v-for="comment in comments" :key="comment.id" class="comment-item">
+      <div 
+        v-for="comment in comments" 
+        :key="comment.id" 
+        :id="`comment-${comment.id}`"
+        class="comment-item"
+        :class="{ 'is-highlighted': highlightCommentId === comment.id }"
+      >
         <div class="comment-avatar">
           <UserAvatar
             :avatar="comment.user?.avatar"
@@ -93,7 +99,7 @@
               />
               <div class="input-toolbar">
                 <el-popover
-                  v-model:visible="showEmojiPicker"
+                  v-model:visible="showEditEmojiPicker"
                   placement="top"
                   :width="300"
                   trigger="manual"
@@ -102,7 +108,7 @@
                     <el-button 
                       text 
                       size="small" 
-                      @click="showEmojiPicker = !showEmojiPicker"
+                      @click="showEditEmojiPicker = !showEditEmojiPicker"
                       type="primary"
                     >
                       😊 表情
@@ -171,7 +177,7 @@
               />
               <div class="input-toolbar">
                 <el-popover
-                  v-model:visible="showEmojiPicker"
+                  v-model:visible="showReplyEmojiPicker"
                   placement="top"
                   :width="300"
                   trigger="manual"
@@ -180,7 +186,7 @@
                     <el-button 
                       text 
                       size="small" 
-                      @click="showEmojiPicker = !showEmojiPicker"
+                      @click="showReplyEmojiPicker = !showReplyEmojiPicker"
                       type="primary"
                     >
                       😊 表情
@@ -217,7 +223,13 @@
 
           <!-- 回复列表 -->
           <div v-if="comment.replies && comment.replies.length > 0" class="replies-list">
-            <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
+            <div 
+              v-for="reply in comment.replies" 
+              :key="reply.id" 
+              :id="`comment-${reply.id}`"
+              class="reply-item"
+              :class="{ 'is-highlighted': highlightCommentId === reply.id }"
+            >
               <div class="comment-avatar">
                 <UserAvatar
                   :avatar="reply.user?.avatar"
@@ -229,6 +241,8 @@
               <div class="comment-content">
                 <div class="comment-meta">
                   <span class="username">{{ reply.user?.nickname || reply.user?.username }}</span>
+                  <span class="reply-indicator">回复了</span>
+                  <span class="reply-to-user">{{ getReplyToUser(reply.content, comment.user) }}</span>
                   <span class="date">{{ formatDate(reply.created_at) }}</span>
                 </div>
                 <div class="comment-text" v-html="renderContent(reply.content)"></div>
@@ -266,7 +280,7 @@
                     />
                     <div class="input-toolbar">
                       <el-popover
-                        v-model:visible="showEmojiPicker"
+                        v-model:visible="showReplyEmojiPicker"
                         placement="top"
                         :width="300"
                         trigger="manual"
@@ -275,7 +289,7 @@
                           <el-button 
                             text 
                             size="small" 
-                            @click="showEmojiPicker = !showEmojiPicker"
+                            @click="showReplyEmojiPicker = !showReplyEmojiPicker"
                             type="primary"
                           >
                             😊 表情
@@ -331,6 +345,10 @@ const props = defineProps({
   articleId: {
     type: Number,
     required: true
+  },
+  highlightCommentId: {
+    type: Number,
+    default: null
   }
 })
 
@@ -347,6 +365,8 @@ const replyContent = ref('')
 const editingCommentId = ref(null)
 const editContent = ref('')
 const showEmojiPicker = ref(false)
+const showReplyEmojiPicker = ref(false)
+const showEditEmojiPicker = ref(false)
 const commentTextareaRef = ref(null)
 const replyTextareaRef = ref(null)
 
@@ -507,6 +527,7 @@ const insertEmoji = (emoji, target) => {
     } else {
       newComment.value += emoji
     }
+    showEmojiPicker.value = false
   } else if (target === 'replyContent') {
     const textarea = replyTextareaRef.value?.$el?.querySelector('textarea')
     if (textarea) {
@@ -521,6 +542,7 @@ const insertEmoji = (emoji, target) => {
     } else {
       replyContent.value += emoji
     }
+    showReplyEmojiPicker.value = false
   } else if (target === 'editContent') {
     const textarea = editTextareaRef.value?.$el?.querySelector('textarea')
     if (textarea) {
@@ -535,19 +557,38 @@ const insertEmoji = (emoji, target) => {
     } else {
       editContent.value += emoji
     }
+    showEditEmojiPicker.value = false
   }
-  showEmojiPicker.value = false
+}
+
+// 获取被回复者的用户名
+const getReplyToUser = (content, topLevelCommentUser) => {
+  if (!content) return topLevelCommentUser?.nickname || topLevelCommentUser?.username || ''
+  
+  // 从内容中提取 @用户名
+  const match = content.match(/@(\S+)/)
+  if (match && match[1]) {
+    return match[1]
+  }
+  
+  // 如果没有 @，返回顶层评论的用户
+  return topLevelCommentUser?.nickname || topLevelCommentUser?.username || ''
 }
 
 // 渲染内容（支持表情和基本HTML）
 const renderContent = (content) => {
   if (!content) return ''
   // 转义HTML，但保留换行
-  return content
+  let rendered = content
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/\n/g, '<br>')
+  
+  // 高亮显示 @用户名
+  rendered = rendered.replace(/@(\S+)/g, '<span class="mention">@$1</span>')
+  
+  return rendered
 }
 
 const editTextareaRef = ref(null)
@@ -592,20 +633,48 @@ const cancelReply = () => {
   replyContent.value = ''
 }
 
-const submitReply = async (parentId) => {
+const submitReply = async (commentId) => {
   try {
     submitting.value = true
-    // 确保 parent_id 被正确传递
-    const payload = {
-      content: replyContent.value,
-      article_id: props.articleId,
-      parent_id: parentId
+    
+    // 找到顶层评论的ID和被回复者的用户名
+    let topLevelCommentId = commentId
+    let replyToUsername = ''
+    
+    // 遍历所有评论，检查commentId是否是某个回复
+    for (const comment of comments.value) {
+      if (comment.id === commentId) {
+        // 这是顶层评论
+        topLevelCommentId = commentId
+        replyToUsername = comment.user?.nickname || comment.user?.username
+        break
+      }
+      // 检查是否在回复列表中
+      if (comment.replies && comment.replies.length > 0) {
+        const foundReply = comment.replies.find(r => r.id === commentId)
+        if (foundReply) {
+          // 这是一个回复，使用顶层评论的ID
+          topLevelCommentId = comment.id
+          replyToUsername = foundReply.user?.nickname || foundReply.user?.username
+          break
+        }
+      }
     }
-    console.log('提交回复:', payload) // 调试日志
+    
+    // 在回复内容前添加 @用户名
+    const contentWithMention = `@${replyToUsername} ${replyContent.value}`
+    
+    const payload = {
+      content: contentWithMention,
+      article_id: props.articleId,
+      parent_id: topLevelCommentId  // 始终使用顶层评论的ID
+    }
+    
+    console.log('提交回复:', payload, '原始commentId:', commentId, '顶层ID:', topLevelCommentId)
     await commentAPI.createComment(payload)
     ElMessage.success('回复发表成功')
     cancelReply()
-    loadComments()
+    await loadComments()
   } catch (error) {
     console.error('回复失败:', error)
     ElMessage.error(error.response?.data?.error || '回复失败，请重试')
@@ -759,6 +828,18 @@ onMounted(() => {
   color: #86868b;
 }
 
+.reply-indicator {
+  font-size: 13px;
+  color: #86868b;
+  font-weight: 400;
+}
+
+.reply-to-user {
+  font-size: 13px;
+  color: #ff6b9d;
+  font-weight: 600;
+}
+
 .comment-text {
   color: #1d1d1f;
   line-height: 1.8;
@@ -885,6 +966,47 @@ onMounted(() => {
   .emoji-item {
     font-size: 20px;
   }
+}
+
+/* @用户名 提及样式 */
+:deep(.mention) {
+  color: #ff6b9d;
+  font-weight: 600;
+  background: rgba(255, 182, 193, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 4px;
+  transition: all 0.2s;
+}
+
+:deep(.mention:hover) {
+  background: rgba(255, 182, 193, 0.25);
+}
+
+/* 高亮评论动画 */
+.is-highlighted {
+  animation: highlightFade 3s ease-in-out;
+}
+
+@keyframes highlightFade {
+  0% {
+    background: rgba(255, 107, 157, 0.2);
+    box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.3);
+  }
+  50% {
+    background: rgba(255, 107, 157, 0.15);
+    box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.2);
+  }
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+.comment-item.is-highlighted,
+.reply-item.is-highlighted {
+  border-radius: 12px;
+  transition: all 0.3s ease;
 }
 </style>
 

@@ -81,17 +81,21 @@
     </article>
 
     <!-- Comments Section -->
-    <section v-if="article" class="comments-section">
+    <section v-if="article" class="comments-section" ref="commentsSection">
       <div class="comments-container">
         <h2 class="comments-title">评论</h2>
-        <CommentSection :article-id="article.id" />
+        <CommentSection 
+          :article-id="article.id" 
+          :highlight-comment-id="highlightCommentId"
+          ref="commentSectionRef"
+        />
       </div>
     </section>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { articleAPI } from '@/api/article'
@@ -104,6 +108,9 @@ const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(false)
 const article = ref(null)
+const commentsSection = ref(null)
+const commentSectionRef = ref(null)
+const highlightCommentId = ref(null)
 
 const isAuthor = computed(() => {
   return userStore.user && article.value && userStore.user.id === article.value.author_id
@@ -112,12 +119,18 @@ const isAuthor = computed(() => {
 const loadArticle = async () => {
   try {
     loading.value = true
+    console.log('加载文章，ID:', route.params.id)
     const res = await articleAPI.getArticle(route.params.id)
+    console.log('文章加载成功:', res.article)
     article.value = res.article
   } catch (error) {
-    console.error(error)
-    ElMessage.error('文章加载失败')
-    router.push('/')
+    console.error('文章加载失败:', error)
+    console.error('错误详情:', error.response?.data || error.message)
+    ElMessage.error('文章加载失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+    // 延迟跳转，让用户看到错误消息
+    setTimeout(() => {
+      router.push('/')
+    }, 2000)
   } finally {
     loading.value = false
   }
@@ -169,8 +182,65 @@ const handleDelete = async () => {
   }
 }
 
-onMounted(() => {
-  loadArticle()
+// 滚动到指定评论
+const scrollToComment = async () => {
+  const commentId = route.query.comment
+  console.log('scrollToComment called, commentId:', commentId)
+  if (!commentId) return
+  
+  highlightCommentId.value = parseInt(commentId)
+  await nextTick()
+  
+  // 重试机制：最多重试10次，每次间隔500ms
+  let retryCount = 0
+  const maxRetries = 10
+  
+  const tryScroll = () => {
+    const commentElement = document.getElementById(`comment-${commentId}`)
+    console.log(`尝试查找评论元素 (第${retryCount + 1}次):`, `comment-${commentId}`, commentElement)
+    
+    if (commentElement) {
+      // 先滚动到评论区
+      if (commentsSection.value) {
+        commentsSection.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+      // 再滚动到具体评论
+      setTimeout(() => {
+        commentElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        // 高亮效果
+        commentElement.classList.add('highlight-comment')
+        setTimeout(() => {
+          commentElement.classList.remove('highlight-comment')
+          highlightCommentId.value = null
+        }, 3000)
+      }, 500)
+    } else {
+      retryCount++
+      if (retryCount < maxRetries) {
+        setTimeout(tryScroll, 500)
+      } else {
+        console.log('未找到评论元素，滚动到评论区')
+        if (commentsSection.value) {
+          commentsSection.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }
+    }
+  }
+  
+  // 初始延迟，等待评论组件开始加载
+  setTimeout(tryScroll, 500)
+}
+
+// 监听路由查询参数变化
+watch(() => route.query.comment, (newCommentId) => {
+  if (newCommentId && article.value) {
+    scrollToComment()
+  }
+})
+
+onMounted(async () => {
+  await loadArticle()
+  scrollToComment()
 })
 </script>
 
@@ -433,6 +503,7 @@ onMounted(() => {
   padding-top: 60px;
   position: relative;
   z-index: 1;
+  scroll-margin-top: 100px;
 }
 
 .comments-container {
@@ -454,6 +525,20 @@ onMounted(() => {
   letter-spacing: -0.011em;
   color: #1d1d1f;
   margin-bottom: 32px;
+}
+
+/* 高亮评论样式 */
+:deep(.highlight-comment) {
+  animation: highlightPulse 2s ease-in-out;
+}
+
+@keyframes highlightPulse {
+  0%, 100% {
+    background: transparent;
+  }
+  50% {
+    background: rgba(255, 107, 157, 0.15);
+  }
 }
 
 /* Loading */

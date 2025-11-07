@@ -81,6 +81,13 @@ func SetupRouter() *gin.Engine {
 		protected.POST("/upload/image", controllers.UploadImage)
 		protected.POST("/upload/video", controllers.UploadVideo)
 		protected.DELETE("/upload/image", controllers.DeleteImage)
+
+		// 通知管理
+		protected.GET("/notifications", controllers.GetNotifications)
+		protected.GET("/notifications/unread-count", controllers.GetUnreadCount)
+		protected.PATCH("/notifications/:id/read", controllers.MarkAsRead)
+		protected.PATCH("/notifications/read-all", controllers.MarkAllAsRead)
+		protected.DELETE("/notifications/:id", controllers.DeleteNotification)
 	}
 
 	// 静态文件服务（提供上传的图片访问）

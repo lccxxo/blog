@@ -61,6 +61,9 @@ func CreateComment(c *gin.Context) {
 	// 加载用户信息
 	database.DB.Preload("User").First(&comment, comment.ID)
 
+	// 创建通知
+	createNotificationForComment(&comment, userID.(uint))
+
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "评论发表成功",
 		"comment": comment,
@@ -90,6 +93,65 @@ func GetArticleComments(c *gin.Context) {
 		"comments": comments,
 		"total":    len(comments),
 	})
+}
+
+// createNotificationForComment 为评论创建通知
+func createNotificationForComment(comment *models.Comment, fromUserID uint) {
+	// 如果是回复评论
+	if comment.ParentID != nil {
+		var parentComment models.Comment
+		if err := database.DB.Preload("User").Preload("Article").First(&parentComment, *comment.ParentID).Error; err != nil {
+			return
+		}
+
+		// 不要给自己发通知
+		if parentComment.UserID == fromUserID {
+			return
+		}
+
+		// 获取回复者的信息
+		var fromUser models.User
+		database.DB.First(&fromUser, fromUserID)
+
+		// 创建通知
+		notification := models.Notification{
+			UserID:     parentComment.UserID,
+			Type:       "comment_reply",
+			Content:    fromUser.Nickname + " 回复了你的评论",
+			CommentID:  &comment.ID,
+			ArticleID:  &comment.ArticleID,
+			FromUserID: fromUserID,
+			IsRead:     false,
+		}
+		database.DB.Create(&notification)
+	} else {
+		// 如果是评论文章，通知文章作者
+		var article models.Article
+		if err := database.DB.Preload("User").First(&article, comment.ArticleID).Error; err != nil {
+			return
+		}
+
+		// 不要给自己发通知
+		if article.AuthorID == fromUserID {
+			return
+		}
+
+		// 获取评论者的信息
+		var fromUser models.User
+		database.DB.First(&fromUser, fromUserID)
+
+		// 创建通知
+		notification := models.Notification{
+			UserID:     article.AuthorID,
+			Type:       "comment_reply",
+			Content:    fromUser.Nickname + " 评论了你的文章",
+			CommentID:  &comment.ID,
+			ArticleID:  &comment.ArticleID,
+			FromUserID: fromUserID,
+			IsRead:     false,
+		}
+		database.DB.Create(&notification)
+	}
 }
 
 // GetComment 获取单个评论

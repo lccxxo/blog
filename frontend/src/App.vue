@@ -42,6 +42,62 @@
 
           <div class="nav-actions">
             <template v-if="userStore.isLoggedIn">
+              <!-- 通知图标和面板 -->
+              <div class="notification-wrapper">
+                <div class="notification-icon" @click="toggleNotifications">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                  </svg>
+                  <span v-if="unreadCount > 0" class="badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+                </div>
+                
+                <!-- 通知面板 -->
+                <div v-if="showNotifications" class="notifications-panel" @click.stop>
+                  <div class="panel-header">
+                    <h3>通知</h3>
+                    <div class="header-actions">
+                      <button @click="markAllAsRead" class="mark-all-btn">全部已读</button>
+                      <button @click="showNotifications = false" class="close-btn">×</button>
+                    </div>
+                  </div>
+                  <div class="notifications-list" v-loading="loadingNotifications">
+                    <div v-if="notifications.length === 0" class="empty-state">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                      </svg>
+                      <p>暂无通知</p>
+                    </div>
+                    <div 
+                      v-for="notification in notifications" 
+                      :key="notification.id"
+                      :class="['notification-item', { unread: !notification.is_read }]"
+                      @click="handleNotificationClick(notification)"
+                    >
+                      <div class="notification-avatar">
+                        <UserAvatar
+                          :avatar="notification.from_user?.avatar"
+                          :username="notification.from_user?.username"
+                          :nickname="notification.from_user?.nickname"
+                          size="small"
+                        />
+                      </div>
+                      <div class="notification-content">
+                        <p class="notification-text">{{ notification.content }}</p>
+                        <span class="notification-time">{{ formatTime(notification.created_at) }}</span>
+                      </div>
+                      <button class="delete-btn" @click.stop="deleteNotification(notification.id)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
               <button class="btn-primary" @click="router.push('/create-article')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -50,8 +106,13 @@
                 写文章
               </button>
               <div class="user-dropdown">
-                <div class="user-avatar" @click="showUserMenu = !showUserMenu">
-                  {{ userStore.user?.username?.charAt(0).toUpperCase() }}
+                <div class="user-avatar-clickable" @click.stop="showUserMenu = !showUserMenu">
+                  <UserAvatar
+                    :avatar="userStore.user?.avatar"
+                    :username="userStore.user?.username"
+                    :nickname="userStore.user?.nickname"
+                    size="medium"
+                  />
                 </div>
                 <div v-if="showUserMenu" class="dropdown-menu" @click.stop>
                   <div class="dropdown-item" @click="router.push('/profile'); showUserMenu = false">
@@ -97,16 +158,22 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, h } from 'vue'
+import { computed, ref, onMounted, onUnmounted, h, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { notificationAPI } from '@/api/notification'
+import UserAvatar from '@/components/UserAvatar.vue'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const isScrolled = ref(false)
 const showUserMenu = ref(false)
+const showNotifications = ref(false)
+const notifications = ref([])
+const unreadCount = ref(0)
+const loadingNotifications = ref(false)
 
 const activeMenu = computed(() => route.path)
 
@@ -292,15 +359,178 @@ const handleLogout = () => {
   showUserMenu.value = false
 }
 
+// 切换通知面板
+const toggleNotifications = () => {
+  console.log('切换通知面板, 当前状态:', showNotifications.value)
+  showNotifications.value = !showNotifications.value
+  console.log('新状态:', showNotifications.value)
+  if (showNotifications.value) {
+    loadNotifications()
+  }
+}
+
 const handleClickOutside = (e) => {
   if (!e.target.closest('.user-dropdown')) {
     showUserMenu.value = false
+  }
+  if (!e.target.closest('.notification-wrapper')) {
+    showNotifications.value = false
+  }
+}
+
+// 加载通知列表
+const loadNotifications = async () => {
+  if (!userStore.isLoggedIn) {
+    console.log('用户未登录，跳过加载通知')
+    return
+  }
+  
+  try {
+    loadingNotifications.value = true
+    console.log('开始加载通知...')
+    const res = await notificationAPI.getNotifications({ page: 1, page_size: 20 })
+    notifications.value = res.notifications || []
+    console.log('通知加载成功:', notifications.value)
+  } catch (error) {
+    console.error('加载通知失败:', error)
+    ElMessage.error('加载通知失败: ' + (error.response?.data?.error || error.message))
+  } finally {
+    loadingNotifications.value = false
+  }
+}
+
+// 加载未读数量
+const loadUnreadCount = async () => {
+  if (!userStore.isLoggedIn) {
+    console.log('用户未登录，跳过加载未读数')
+    return
+  }
+  
+  try {
+    console.log('开始加载未读数量...')
+    const res = await notificationAPI.getUnreadCount()
+    unreadCount.value = res.count || 0
+    console.log('未读数量:', unreadCount.value)
+  } catch (error) {
+    console.error('加载未读数量失败:', error)
+  }
+}
+
+// 标记所有为已读
+const markAllAsRead = async () => {
+  try {
+    await notificationAPI.markAllAsRead()
+    notifications.value.forEach(n => n.is_read = true)
+    unreadCount.value = 0
+    ElMessage.success('已全部标记为已读')
+  } catch (error) {
+    console.error('标记失败:', error)
+  }
+}
+
+// 删除通知
+const deleteNotification = async (id) => {
+  try {
+    await notificationAPI.deleteNotification(id)
+    notifications.value = notifications.value.filter(n => n.id !== id)
+    loadUnreadCount()
+    ElMessage.success('通知已删除')
+  } catch (error) {
+    console.error('删除失败:', error)
+  }
+}
+
+// 点击通知
+const handleNotificationClick = async (notification) => {
+  console.log('点击通知，完整数据:', JSON.stringify(notification, null, 2))
+  
+  // 标记为已读
+  if (!notification.is_read) {
+    try {
+      await notificationAPI.markAsRead(notification.id)
+      notification.is_read = true
+      unreadCount.value = Math.max(0, unreadCount.value - 1)
+    } catch (error) {
+      console.error('标记通知为已读失败:', error)
+    }
+  }
+  
+  // 跳转到对应文章和评论
+  const articleId = notification.article_id || notification.article?.id
+  console.log('文章ID:', articleId, '通知对象:', notification)
+  
+  if (articleId) {
+    showNotifications.value = false
+    // 如果有评论ID，添加到URL参数中
+    const commentId = notification.comment_id || notification.comment?.id
+    console.log('准备跳转 - 文章ID:', articleId, '评论ID:', commentId)
+    
+    if (commentId) {
+      router.push({
+        path: `/article/${articleId}`,
+        query: { comment: String(commentId) }
+      }).catch(err => {
+        console.error('路由跳转失败:', err)
+        ElMessage.error('跳转失败，请重试')
+      })
+    } else {
+      router.push(`/article/${articleId}`).catch(err => {
+        console.error('路由跳转失败:', err)
+        ElMessage.error('跳转失败，请重试')
+      })
+    }
+  } else {
+    console.error('通知中没有文章ID:', notification)
+    ElMessage.error('通知数据异常，无法跳转')
+  }
+}
+
+// 格式化时间
+const formatTime = (dateStr) => {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = now - date
+  
+  const minute = 60 * 1000
+  const hour = 60 * minute
+  const day = 24 * hour
+  
+  if (diff < minute) {
+    return '刚刚'
+  } else if (diff < hour) {
+    return `${Math.floor(diff / minute)}分钟前`
+  } else if (diff < day) {
+    return `${Math.floor(diff / hour)}小时前`
+  } else if (diff < 7 * day) {
+    return `${Math.floor(diff / day)}天前`
+  } else {
+    return date.toLocaleDateString('zh-CN')
   }
 }
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll)
   document.addEventListener('click', handleClickOutside)
+  
+  // 如果已登录，加载通知
+  if (userStore.isLoggedIn) {
+    loadNotifications()
+    loadUnreadCount()
+    
+    // 每30秒刷新未读数
+    setInterval(loadUnreadCount, 30000)
+  }
+})
+
+// 监听登录状态变化
+watch(() => userStore.isLoggedIn, (isLoggedIn) => {
+  if (isLoggedIn) {
+    loadNotifications()
+    loadUnreadCount()
+  } else {
+    notifications.value = []
+    unreadCount.value = 0
+  }
 })
 
 onUnmounted(() => {
@@ -504,6 +734,231 @@ onUnmounted(() => {
 
 .user-avatar:hover {
   transform: scale(1.05);
+}
+
+/* 通知包装器 */
+.notification-wrapper {
+  position: relative;
+}
+
+/* 通知图标样式 */
+.notification-icon {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  color: #1d1d1f;
+}
+
+.notification-icon:hover {
+  background: rgba(255, 182, 193, 0.15);
+  color: #ff6b9d;
+}
+
+.notification-icon .badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: linear-gradient(135deg, #ff6b9d, #ff8fab);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 10px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(255, 107, 157, 0.4);
+}
+
+/* 通知面板样式 */
+.notifications-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 380px;
+  max-height: 500px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 182, 193, 0.2);
+  z-index: 1001;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 182, 193, 0.15);
+  background: rgba(255, 240, 248, 0.3);
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mark-all-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #ff6b9d;
+  background: transparent;
+  border: 1px solid rgba(255, 107, 157, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mark-all-btn:hover {
+  background: rgba(255, 182, 193, 0.15);
+  border-color: #ff6b9d;
+}
+
+.close-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #86868b;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 182, 193, 0.15);
+  color: #ff6b9d;
+}
+
+.notifications-list {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.empty-state {
+  padding: 60px 20px;
+  text-align: center;
+  color: #86868b;
+}
+
+.empty-state svg {
+  color: rgba(255, 182, 193, 0.5);
+  margin-bottom: 16px;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.notification-item {
+  padding: 16px 20px;
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid rgba(255, 182, 193, 0.1);
+  position: relative;
+}
+
+.notification-item:hover {
+  background: rgba(255, 240, 248, 0.5);
+}
+
+.notification-item.unread {
+  background: rgba(255, 240, 248, 0.3);
+}
+
+.notification-item.unread::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background: #ff6b9d;
+  border-radius: 50%;
+}
+
+.notification-avatar {
+  flex-shrink: 0;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-text {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  color: #1d1d1f;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.notification-time {
+  font-size: 12px;
+  color: #86868b;
+}
+
+.delete-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #86868b;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.notification-item:hover .delete-btn {
+  opacity: 1;
+}
+
+.delete-btn:hover {
+  background: rgba(255, 107, 157, 0.15);
+  color: #ff6b9d;
+}
+
+@media (max-width: 768px) {
+  .notifications-panel {
+    width: calc(100vw - 32px);
+    right: 16px;
+  }
 }
 
 .dropdown-menu {
