@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -92,6 +93,17 @@ func SetupRouter() *gin.Engine {
 
 	// 静态文件服务（提供上传的图片访问）
 	r.Static("/uploads", "./uploads")
+
+	// 生产模式：服务前端构建产物 (SPA)
+	// 静态资源
+	r.Static("/assets", "./frontend/dist/assets")
+	r.StaticFile("/favicon.ico", "./frontend/dist/favicon.ico")
+	// SPA 回退：非 API 路由统一返回 index.html
+	r.NoRoute(func(c *gin.Context) {
+		if !strings.HasPrefix(c.Request.URL.Path, "/api") {
+			c.File("./frontend/dist/index.html")
+		}
+	})
 
 	return r
 }

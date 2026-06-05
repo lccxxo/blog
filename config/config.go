@@ -36,7 +36,7 @@ type JWTConfig struct {
 
 var AppConfig = Config{
 	Server: ServerConfig{
-		Port: ":8080",
+		Port: ":3000",
 	},
 	Database: DatabaseConfig{
 		Driver: "sqlite",
