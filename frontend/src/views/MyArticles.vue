@@ -128,7 +128,7 @@ const getCoverImageUrl = (url) => {
   if (!url) return ''
   // 如果是相对路径，添加完整的URL
   if (url.startsWith('/uploads')) {
-    return `http://localhost:8080${url}`
+    return url
   }
   return url
 }

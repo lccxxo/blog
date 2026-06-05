@@ -34,7 +34,7 @@ const originalImageRenderer = renderer.image.bind(renderer)
 renderer.image = function(href, title, text) {
   // 如果是相对路径，添加完整的URL
   if (href && href.startsWith('/uploads')) {
-    href = `http://localhost:8080${href}`
+    href = href
   }
   return originalImageRenderer(href, title, text)
 }

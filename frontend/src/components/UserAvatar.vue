@@ -43,7 +43,7 @@ const avatarUrl = computed(() => {
   if (!props.avatar) return ''
   // 如果是相对路径，添加完整 URL
   if (props.avatar.startsWith('/uploads')) {
-    return `http://localhost:8080${props.avatar}`
+    return props.avatar
   }
   // 如果是完整 URL（OSS），直接返回
   if (props.avatar.startsWith('http')) {

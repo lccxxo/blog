@@ -95,13 +95,18 @@ func SetupRouter() *gin.Engine {
 	r.Static("/uploads", "./uploads")
 
 	// 生产模式：服务前端构建产物 (SPA)
-	// 静态资源
-	r.Static("/assets", "./frontend/dist/assets")
-	r.StaticFile("/favicon.ico", "./frontend/dist/favicon.ico")
-	// SPA 回退：非 API 路由统一返回 index.html
+	distPath := "./frontend/dist"
+	// Vite 构建输出 (JS/CSS)
+	r.Static("/assets", distPath+"/assets")
+	// public/ 目录下的静态资源
+	r.Static("/decorations", distPath+"/decorations")
+	r.StaticFile("/hero-banner.jpg", distPath+"/hero-banner.jpg")
+	r.StaticFile("/diary-title.png", distPath+"/diary-title.png")
+	r.StaticFile("/favicon.ico", distPath+"/favicon.ico")
+	// SPA 回退：非 API 的 GET 请求返回 index.html（支持 Vue Router history 模式）
 	r.NoRoute(func(c *gin.Context) {
-		if !strings.HasPrefix(c.Request.URL.Path, "/api") {
-			c.File("./frontend/dist/index.html")
+		if c.Request.Method == "GET" && !strings.HasPrefix(c.Request.URL.Path, "/api") {
+			c.File(distPath + "/index.html")
 		}
 	})
 
