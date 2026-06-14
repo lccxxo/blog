@@ -130,35 +130,112 @@
     <section class="filters-section">
       <div class="filters-container">
         <div class="filter-group">
-          <select 
-            v-model="filters.category_id" 
-            @change="loadArticles"
-            class="apple-select"
-          >
-            <option value="">所有分类</option>
-            <option 
-              v-for="category in categories" 
-              :key="category.id"
-              :value="category.id"
+          <!-- 分类筛选 -->
+          <div class="filter-dropdown" :class="{ open: openDropdown === 'category' }">
+            <button
+              type="button"
+              class="filter-trigger"
+              :class="{ active: filters.category_id !== '' }"
+              @click.stop="toggleDropdown('category')"
             >
-              {{ category.name }}
-            </option>
-          </select>
-          
-          <select 
-            v-model="filters.tag_id" 
-            @change="loadArticles"
-            class="apple-select"
-          >
-            <option value="">所有标签</option>
-            <option 
-              v-for="tag in tags" 
-              :key="tag.id"
-              :value="tag.id"
+              <span class="filter-trigger-icon">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 7a2 2 0 0 1 2-2h3.5l1.8 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>
+                </svg>
+              </span>
+              <span class="filter-trigger-text">
+                <span class="filter-trigger-key">分类</span>
+                <span class="filter-trigger-value">{{ selectedCategoryName }}</span>
+              </span>
+              <span class="filter-chevron">
+                <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
+                  <path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </button>
+            <transition name="filter-menu">
+              <div v-show="openDropdown === 'category'" class="filter-menu" @click.stop>
+                <button
+                  type="button"
+                  class="filter-option"
+                  :class="{ selected: filters.category_id === '' }"
+                  @click="selectFilter('category', '')"
+                >
+                  <span>全部分类</span>
+                  <span class="filter-check">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                  </span>
+                </button>
+                <button
+                  v-for="category in categories"
+                  :key="category.id"
+                  type="button"
+                  class="filter-option"
+                  :class="{ selected: filters.category_id === category.id }"
+                  @click="selectFilter('category', category.id)"
+                >
+                  <span>{{ category.name }}</span>
+                  <span class="filter-check">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                  </span>
+                </button>
+              </div>
+            </transition>
+          </div>
+
+          <!-- 标签筛选 -->
+          <div class="filter-dropdown" :class="{ open: openDropdown === 'tag' }">
+            <button
+              type="button"
+              class="filter-trigger"
+              :class="{ active: filters.tag_id !== '' }"
+              @click.stop="toggleDropdown('tag')"
             >
-              {{ tag.name }}
-            </option>
-          </select>
+              <span class="filter-trigger-icon">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                  <circle cx="7" cy="7" r="1.3" fill="currentColor" stroke="none"/>
+                </svg>
+              </span>
+              <span class="filter-trigger-text">
+                <span class="filter-trigger-key">标签</span>
+                <span class="filter-trigger-value">{{ selectedTagName }}</span>
+              </span>
+              <span class="filter-chevron">
+                <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
+                  <path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </button>
+            <transition name="filter-menu">
+              <div v-show="openDropdown === 'tag'" class="filter-menu" @click.stop>
+                <button
+                  type="button"
+                  class="filter-option"
+                  :class="{ selected: filters.tag_id === '' }"
+                  @click="selectFilter('tag', '')"
+                >
+                  <span>全部标签</span>
+                  <span class="filter-check">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                  </span>
+                </button>
+                <button
+                  v-for="tag in tags"
+                  :key="tag.id"
+                  type="button"
+                  class="filter-option"
+                  :class="{ selected: filters.tag_id === tag.id }"
+                  @click="selectFilter('tag', tag.id)"
+                >
+                  <span>{{ tag.name }}</span>
+                  <span class="filter-check">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                  </span>
+                </button>
+              </div>
+            </transition>
+          </div>
         </div>
       </div>
     </section>
@@ -310,7 +387,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { articleAPI } from '@/api/article'
 import { categoryAPI } from '@/api/category'
@@ -334,6 +411,46 @@ const filters = ref({
 })
 
 const viewMode = ref('list') // 'grid' 或 'list'，默认横向列表
+
+// 筛选下拉框
+const openDropdown = ref(null) // 'category' | 'tag' | null
+
+const toggleDropdown = (name) => {
+  openDropdown.value = openDropdown.value === name ? null : name
+}
+
+const selectFilter = (type, value) => {
+  if (type === 'category') {
+    filters.value.category_id = value
+  } else {
+    filters.value.tag_id = value
+  }
+  openDropdown.value = null
+  pagination.value.page = 1
+  loadArticles()
+}
+
+const selectedCategoryName = computed(() => {
+  if (filters.value.category_id === '') return '全部分类'
+  const match = categories.value.find(item => item.id === filters.value.category_id)
+  return match ? match.name : '全部分类'
+})
+
+const selectedTagName = computed(() => {
+  if (filters.value.tag_id === '') return '全部标签'
+  const match = tags.value.find(item => item.id === filters.value.tag_id)
+  return match ? match.name : '全部标签'
+})
+
+const handleClickOutside = (e) => {
+  if (!e.target.closest('.filter-dropdown')) {
+    openDropdown.value = null
+  }
+}
+
+const handleEscKey = (e) => {
+  if (e.key === 'Escape') openDropdown.value = null
+}
 
 // 恋爱纪念日配置（请修改为你的纪念日）
 const anniversaryDate = new Date('2025-10-25T01:00:00') // 2025年10月25日凌晨1点
@@ -553,12 +670,18 @@ onMounted(() => {
   countdownTimer = setInterval(() => {
     calculateAnniversary()
   }, 1000)
+
+  // 点击外部 / 按 ESC 关闭筛选下拉框
+  document.addEventListener('click', handleClickOutside)
+  document.addEventListener('keydown', handleEscKey)
 })
 
 onUnmounted(() => {
   if (countdownTimer) {
     clearInterval(countdownTimer)
   }
+  document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleEscKey)
 })
 </script>
 
@@ -1134,6 +1257,7 @@ onUnmounted(() => {
   background: transparent;
   border-bottom: none;
   position: relative;
+  z-index: 20;
 }
 
 .filters-section::before {
@@ -1160,47 +1284,228 @@ onUnmounted(() => {
   justify-content: center;
   position: relative;
   z-index: 1;
+  flex-wrap: wrap;
 }
 
-.apple-select {
-  padding: 12px 24px;
-  font-size: 15px;
-  color: #8b5a3c;
+/* 自定义筛选下拉框 */
+.filter-dropdown {
+  position: relative;
+}
+
+.filter-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 186px;
+  padding: 9px 16px 9px 9px;
+  font-family: inherit;
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 182, 193, 0.3);
+  -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 182, 193, 0.32);
   border-radius: 980px;
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%23ffb6c1' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 18px center;
-  padding-right: 48px;
-  box-shadow: 
+  box-shadow:
     0 4px 16px rgba(255, 182, 193, 0.12),
     0 2px 8px rgba(255, 182, 193, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-
-.apple-select:hover {
-  border-color: rgba(255, 182, 193, 0.5);
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 
-    0 6px 24px rgba(255, 182, 193, 0.2),
-    0 3px 12px rgba(255, 182, 193, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  transform: translateY(-2px);
 }
 
-.apple-select:focus {
-  outline: none;
-  border-color: #ff6b9d;
-  background: rgba(255, 255, 255, 1);
-  box-shadow: 
-    0 0 0 4px rgba(255, 107, 157, 0.15),
-    0 6px 24px rgba(255, 182, 193, 0.25),
+.filter-trigger:hover {
+  border-color: rgba(255, 182, 193, 0.55);
+  background: rgba(255, 255, 255, 0.96);
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 24px rgba(255, 182, 193, 0.22),
+    0 3px 12px rgba(255, 182, 193, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.filter-dropdown.open .filter-trigger,
+.filter-trigger.active {
+  border-color: rgba(255, 107, 157, 0.55);
+  box-shadow:
+    0 0 0 4px rgba(255, 107, 157, 0.12),
+    0 8px 24px rgba(255, 182, 193, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.filter-trigger-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #ff6b9d;
+  background: linear-gradient(135deg, rgba(255, 107, 157, 0.16) 0%, rgba(255, 182, 193, 0.14) 100%);
+  flex-shrink: 0;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.filter-trigger.active .filter-trigger-icon {
+  color: #fff;
+  background: linear-gradient(135deg, #ff6b9d 0%, #ff8fab 100%);
+  box-shadow: 0 2px 8px rgba(255, 107, 157, 0.32);
+}
+
+.filter-trigger-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-trigger-key {
+  font-size: 11px;
+  font-weight: 500;
+  color: #c9a08a;
+  letter-spacing: 0.02em;
+}
+
+.filter-trigger-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #8b5a3c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+  transition: color 0.3s ease;
+}
+
+.filter-trigger.active .filter-trigger-value {
+  color: #ff6b9d;
+}
+
+.filter-chevron {
+  display: flex;
+  align-items: center;
+  color: #ffb6c1;
+  flex-shrink: 0;
+  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), color 0.3s ease;
+}
+
+.filter-dropdown.open .filter-chevron {
+  transform: rotate(180deg);
+  color: #ff6b9d;
+}
+
+/* 下拉菜单 */
+.filter-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  right: 0;
+  min-width: 100%;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 182, 193, 0.3);
+  border-radius: 20px;
+  box-shadow:
+    0 14px 38px rgba(255, 130, 160, 0.18),
+    0 4px 12px rgba(255, 182, 193, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  z-index: 30;
+  max-height: 308px;
+  overflow-y: auto;
+}
+
+/* 小尖角 */
+.filter-menu::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 26px;
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  border-left: 2px solid rgba(255, 182, 193, 0.3);
+  border-top: 2px solid rgba(255, 182, 193, 0.3);
+  transform: rotate(45deg);
+}
+
+.filter-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #8b5a3c;
+  background: transparent;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.filter-option + .filter-option {
+  margin-top: 2px;
+}
+
+.filter-option:hover {
+  background: linear-gradient(135deg, rgba(255, 107, 157, 0.1) 0%, rgba(255, 182, 193, 0.08) 100%);
+  color: #ff6b9d;
+}
+
+.filter-option.selected {
+  background: linear-gradient(135deg, #ff6b9d 0%, #ff8fab 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(255, 107, 157, 0.25);
+}
+
+.filter-check {
+  display: flex;
+  align-items: center;
+  color: #fff;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.filter-option.selected .filter-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* 菜单滚动条 */
+.filter-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.filter-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 182, 193, 0.5);
+  border-radius: 3px;
+}
+
+.filter-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 菜单开合动画 */
+.filter-menu-enter-active,
+.filter-menu-leave-active {
+  transition: opacity 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform-origin: top center;
+}
+
+.filter-menu-enter-from,
+.filter-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
 }
 
 /* Articles Section - 温馨风格 */
@@ -1870,6 +2175,17 @@ onUnmounted(() => {
 
   .filter-group {
     flex-direction: column;
+    align-items: stretch;
+    padding: 0 8px;
+  }
+
+  .filter-dropdown {
+    width: 100%;
+  }
+
+  .filter-trigger {
+    width: 100%;
+    min-width: 0;
   }
 }
 </style>
